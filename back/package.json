@@ -4,6 +4,9 @@
   "description": "Backend GraphQL (Apollo Server + SQLite) para la Práctica P2-6: e-commerce Betonos.",
   "main": "index.js",
   "type": "module",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
