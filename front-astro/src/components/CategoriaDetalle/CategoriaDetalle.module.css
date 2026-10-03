@@ -1,0 +1,38 @@
+.encabezado {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.titulo {
+  font-size: 34px;
+}
+
+.volver {
+  background: none;
+  border: none;
+  color: var(--color-texto-tenue);
+  font-size: 14px;
+  padding: 6px 0;
+}
+
+.volver:hover {
+  color: var(--color-acento);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.vacio {
+  color: var(--color-texto-tenue);
+  padding: 40px 0;
+}
+
+.error {
+  color: var(--color-acento);
+  padding: 20px 0;
+}

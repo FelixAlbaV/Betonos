@@ -1,0 +1,54 @@
+.seccion {
+  margin: 28px 0;
+}
+
+.encabezado {
+  max-width: 520px;
+  margin-bottom: 20px;
+}
+
+.etiqueta {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--color-oro);
+  font-weight: 600;
+}
+
+.titulo {
+  font-size: 32px;
+  margin-top: 8px;
+}
+
+.texto {
+  margin-top: 10px;
+  color: var(--color-texto-tenue);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.tarjeta {
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  padding: 20px 18px;
+}
+
+.tarjeta h3 {
+  font-family: var(--fuente-texto);
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.tarjeta p {
+  font-size: 13px;
+  color: var(--color-texto-tenue);
+  margin: 0;
+  line-height: 1.5;
+}

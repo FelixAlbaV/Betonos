@@ -1,0 +1,20 @@
+{
+  "name": "p26-backend-graphql",
+  "version": "1.0.0",
+  "description": "Backend GraphQL (Apollo Server + SQLite) para la Práctica P2-6: e-commerce Betonos.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "seed": "node src/seed.js"
+  },
+  "author": "Alberto Salvador Briseño Carrillo - A23100125",
+  "license": "MIT",
+  "dependencies": {
+    "@apollo/server": "^4.11.3",
+    "better-sqlite3": "^11.5.0",
+    "cors": "^2.8.5",
+    "graphql": "^16.9.0"
+  }
+}

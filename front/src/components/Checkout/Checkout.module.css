@@ -1,0 +1,90 @@
+.titulo {
+  font-size: 34px;
+  margin-bottom: 24px;
+}
+
+.formulario {
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.campo label {
+  font-size: 13px;
+  color: var(--color-texto-tenue);
+}
+
+.campo input {
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  color: var(--color-texto);
+  padding: 11px 14px;
+  border-radius: var(--radio);
+  font-size: 15px;
+  font-family: var(--fuente-texto);
+}
+
+.campo input:focus {
+  border-color: var(--color-acento);
+  outline: none;
+}
+
+.resumen {
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  padding: 16px;
+  font-size: 14px;
+  color: var(--color-texto-tenue);
+  display: flex;
+  justify-content: space-between;
+}
+
+.resumen strong {
+  color: var(--color-oro);
+  font-size: 16px;
+}
+
+.botonPagar {
+  background: var(--color-acento);
+  color: #fff;
+  border: none;
+  padding: 13px 20px;
+  border-radius: var(--radio);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.botonPagar:hover {
+  background: var(--color-acento-hover);
+}
+
+.botonPagar:disabled {
+  background: var(--color-borde);
+  color: var(--color-texto-tenue);
+}
+
+.errorTexto {
+  color: var(--color-acento);
+  font-size: 14px;
+}
+
+.volver {
+  background: none;
+  border: none;
+  color: var(--color-texto-tenue);
+  font-size: 14px;
+  margin-bottom: 20px;
+  padding: 0;
+}
+
+.volver:hover {
+  color: var(--color-acento);
+}

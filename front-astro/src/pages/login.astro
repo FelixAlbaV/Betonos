@@ -1,0 +1,77 @@
+---
+import { getSession } from 'auth-astro/server'
+
+const session = await getSession(Astro.request)
+if (session) return Astro.redirect('/')
+---
+
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Work+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <title>Betonos — Iniciar sesión</title>
+    <style>
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        margin: 0;
+        font-family: 'Work Sans', sans-serif;
+        background: #111;
+        color: #fff;
+      }
+      main {
+        text-align: center;
+      }
+      h1 {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 3rem;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+      }
+      p {
+        opacity: 0.8;
+        margin-bottom: 2rem;
+      }
+      button.boton {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.8rem 1.6rem;
+        background: #fff;
+        color: #111;
+        border: none;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+      button.boton:hover {
+        opacity: 0.9;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Be<span>tonos</span></h1>
+      <p>Inicia sesión para entrar a la tienda.</p>
+      <button class="boton" id="boton-login">Iniciar sesión con Google</button>
+    </main>
+
+    <script>
+      // El login real con Google requiere un POST con token CSRF, no un
+      // simple link GET (Auth.js lo rechaza con UnknownAction). El helper
+      // signIn() de auth-astro/client arma esa petición correctamente.
+      const { signIn } = await import('auth-astro/client')
+      document.querySelector('#boton-login').addEventListener('click', () => signIn('google'))
+    </script>
+  </body>
+</html>

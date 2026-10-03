@@ -1,0 +1,82 @@
+/* src/global.css
+   Identidad visual: marca de audio — negro carbón, rojo de acento,
+   dorado premium. Tipografía condensada para títulos (Bebas Neue) +
+   Work Sans para texto de lectura.
+*/
+
+:root {
+  --color-fondo: #15110f;
+  --color-superficie: #1e1815;
+  --color-superficie-alta: #26201c;
+  --color-borde: #3a322c;
+  --color-texto: #f3ede4;
+  --color-texto-tenue: #a89c8e;
+  --color-acento: #e2432a;
+  --color-acento-hover: #f0553b;
+  --color-oro: #e8b930;
+
+  --fuente-display: "Bebas Neue", "Arial Narrow", sans-serif;
+  --fuente-texto: "Work Sans", system-ui, sans-serif;
+
+  --radio: 3px;
+  --sombra: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-family: var(--fuente-texto);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--fuente-display);
+  letter-spacing: 0.02em;
+  margin: 0;
+  line-height: 1;
+}
+
+button {
+  font-family: var(--fuente-texto);
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-oro);
+  outline-offset: 2px;
+}
+
+.contenedor {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -1,0 +1,15 @@
+.pie {
+  margin-top: 60px;
+  padding: 28px 24px;
+  border-top: 1px solid var(--color-borde);
+  color: var(--color-texto-tenue);
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pie strong {
+  color: var(--color-texto);
+}
