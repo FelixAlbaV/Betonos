@@ -1,0 +1,331 @@
+---
+/**
+ * Dashboard de Betonos (solo lectura).
+ * Acceso: Google Auth + lista de correos autorizados (ADMIN_EMAILS).
+ * Los datos se consultan DESDE EL SERVIDOR con BETONOS_INTERNAL_KEY.
+ * No modifica las rutas de Mercado Pago, Stripe o el CRUD existente.
+ */
+import { getSession } from 'auth-astro/server'
+import { consultarBackend } from '../lib/betonosServer'
+import '../styles/admin.css'
+
+const sesion = await getSession(Astro.request)
+if (!sesion?.user?.email) return Astro.redirect('/login')
+
+// Si no hay ADMIN_EMAILS, NO se concede acceso a nadie.
+const permitidos = (import.meta.env.ADMIN_EMAILS || '')
+  .split(',')
+  .map((correo: string) => correo.trim().toLowerCase())
+  .filter(Boolean)
+const correoActual = sesion.user.email.trim().toLowerCase()
+if (!permitidos.includes(correoActual)) {
+  return new Response('403 — No tienes permisos para acceder al panel de administración.', {
+    status: 403,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }
+  })
+}
+
+Astro.response.headers.set('Cache-Control', 'private, no-store, max-age=0')
+
+type Categoria = { id: string; nombre: string; descripcion: string }
+type Producto = {
+  id: string; nombre: string; precio: number; stock: number
+  categoria: { id: string; nombre: string }
+}
+type Pedido = {
+  id: string; fecha: string; estado: string; total: number
+  clienteNombre: string; clienteEmail: string
+  items: { cantidad: number; producto: { nombre: string } }[]
+}
+
+const CONSULTA_CATEGORIAS = `query { categorias { id nombre descripcion } }`
+const CONSULTA_PRODUCTOS = `
+  query($limite: Int!, $inicio: Int!) {
+    productos(limit: $limite, offset: $inicio) {
+      id nombre precio stock categoria { id nombre }
+    }
+  }
+`
+const CONSULTA_PEDIDOS = `
+  query($limite: Int!, $inicio: Int!) {
+    pedidos(limit: $limite, offset: $inicio) {
+      id fecha estado total clienteNombre clienteEmail
+      items { cantidad producto { nombre } }
+    }
+  }
+`
+
+// El backend ya soporta limit y offset: no dependemos de un límite fijo de 20 registros.
+async function consultarTodos<T>(consulta: string, campo: string): Promise<T[]> {
+  const tamano = 100
+  const filas: T[] = []
+  for (let pagina = 0; pagina < 200; pagina++) {
+    const datos = await consultarBackend(consulta, { limite: tamano, inicio: pagina * tamano })
+    const lote = datos[campo] as T[]
+    if (!Array.isArray(lote)) throw new Error(`Respuesta inválida en ${campo}`)
+    filas.push(...lote)
+    if (lote.length < tamano) return filas
+  }
+  // Nunca mostrar indicadores incompletos como si fueran exactos.
+  throw new Error(`Se superó el límite de lectura para ${campo}`)
+}
+
+let categorias: Categoria[] = []
+let productos: Producto[] = []
+let pedidos: Pedido[] = []
+let fallo = false
+
+try {
+  const [datosCategorias, listaProductos, listaPedidos] = await Promise.all([
+    consultarBackend(CONSULTA_CATEGORIAS),
+    consultarTodos<Producto>(CONSULTA_PRODUCTOS, 'productos'),
+    consultarTodos<Pedido>(CONSULTA_PEDIDOS, 'pedidos')
+  ])
+  categorias = datosCategorias.categorias
+  productos = listaProductos
+  pedidos = listaPedidos
+} catch (error) {
+  console.error('[Dashboard Betonos]', error)
+  fallo = true
+}
+
+const pagados = pedidos.filter(p => p.estado === 'PAGADO' || p.estado === 'ENVIADO')
+const pendientes = pedidos.filter(p => p.estado === 'PENDIENTE')
+const totalStock = productos.reduce((suma, p) => suma + p.stock, 0)
+const stockBajo = productos.filter(p => p.stock > 0 && p.stock <= 5).length
+const agotados = productos.filter(p => p.stock === 0).length
+const ingresos = pagados.reduce((suma, p) => suma + p.total, 0)
+const pedidosRecientes = pedidos.slice(0, 75)
+
+const precio = (n: number) => new Intl.NumberFormat('es-MX', {
+  style: 'currency', currency: 'MXN'
+}).format(n)
+const numero = (n: number) => new Intl.NumberFormat('es-MX').format(n)
+const fecha = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s)
+  ? s.split('-').reverse().join('/') : s
+const estadoTexto: Record<string, string> = {
+  PENDIENTE: 'Pendiente', PAGADO: 'Pagado', ENVIADO: 'Enviado', CANCELADO: 'Cancelado'
+}
+const estados = ['PAGADO', 'ENVIADO', 'PENDIENTE', 'CANCELADO']
+const conteos = Object.fromEntries(estados.map(estado => [
+  estado, pedidos.filter(p => p.estado === estado).length
+]))
+const resumenCategorias = categorias.map(categoria => {
+  const items = productos.filter(p => String(p.categoria?.id) === String(categoria.id))
+  return {
+    ...categoria,
+    articulos: items.length,
+    existencias: items.reduce((s, p) => s + p.stock, 0)
+  }
+})
+const maxCategoria = Math.max(1, ...resumenCategorias.map(c => c.existencias))
+---
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Work+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <title>Panel administrativo · Betonos</title>
+  </head>
+  <body class="admin-body">
+    <div class="admin-layout">
+      <aside class="admin-sidebar" aria-label="Navegación administrativa">
+        <a class="admin-logo" href="/">BE<span>TONOS</span><small>ADMIN</small></a>
+        <div class="admin-side-label">GESTIÓN DE TIENDA</div>
+        <nav class="admin-menu">
+          <a href="/admin/gestion"><span aria-hidden="true">✎</span> Gestionar tienda</a>
+          <a class="selected" href="#resumen"><span aria-hidden="true">▦</span> Resumen</a>
+          <a href="#productos"><span aria-hidden="true">◫</span> Artículos</a>
+          <a href="#categorias"><span aria-hidden="true">▤</span> Categorías</a>
+          <a href="#pedidos"><span aria-hidden="true">▣</span> Compras</a>
+        </nav>
+        <div class="admin-side-footer">
+          <span class="admin-status"><span class="admin-status-dot"></span> Panel conectado</span>
+          <a href="/">← Volver a la tienda</a>
+        </div>
+      </aside>
+
+      <main class="admin-main" id="resumen">
+        <header class="admin-topbar">
+          <div>
+            <span class="admin-eyebrow">BETONOS / ADMINISTRACIÓN</span>
+            <h1>Panel de control<span class="admin-punto">.</span></h1>
+            <p class="admin-subtitle">Inventario y operaciones de tu tienda en un solo lugar.</p>
+          </div>
+          <div class="admin-top-actions">
+            <span class="admin-user" title={correoActual}><span class="admin-avatar">{(sesion.user.name || correoActual).charAt(0).toUpperCase()}</span><span>{sesion.user.name || 'Administrador'}<small>Administrador autorizado</small></span></span>
+            <a href="/admin" class="admin-refresh">↻ <span>Actualizar datos</span></a>
+          </div>
+        </header>
+
+        {fallo ? (
+          <section class="admin-error" role="alert">
+            <h2>No pudimos cargar el panel</h2>
+            <p>Comprueba que <strong>back</strong> esté encendido en el puerto 4000 y que <code>BETONOS_INTERNAL_KEY</code> coincida en ambos servidores.</p>
+            <a href="/admin">Reintentar</a>
+          </section>
+        ) : (
+          <>
+            <section class="admin-kpis" aria-label="Indicadores principales">
+              <article class="admin-kpi">
+                <div class="admin-kpi-top"><span>ARTÍCULOS</span><span class="admin-kpi-icon">◫</span></div>
+                <strong>{numero(productos.length)}</strong>
+                <p>Productos en el catálogo</p>
+              </article>
+              <article class="admin-kpi">
+                <div class="admin-kpi-top"><span>CATEGORÍAS</span><span class="admin-kpi-icon">▤</span></div>
+                <strong>{numero(categorias.length)}</strong>
+                <p>Grupos de productos</p>
+              </article>
+              <article class="admin-kpi">
+                <div class="admin-kpi-top"><span>COMPRAS</span><span class="admin-kpi-icon">▣</span></div>
+                <strong>{numero(pedidos.length)}</strong>
+                <p>{numero(pagados.length)} confirmadas · {numero(pendientes.length)} pendientes</p>
+              </article>
+              <article class="admin-kpi admin-kpi-accent">
+                <div class="admin-kpi-top"><span>UNIDADES EN STOCK</span><span class="admin-kpi-icon">◈</span></div>
+                <strong>{numero(totalStock)}</strong>
+                <p>{stockBajo} productos con pocas unidades · {agotados} agotados</p>
+              </article>
+            </section>
+
+            <section class="admin-overview">
+              <article class="admin-panel admin-revenue">
+                <span class="admin-eyebrow">OPERACIONES</span>
+                <h2>Ventas confirmadas</h2>
+                <strong>{precio(ingresos)}</strong>
+                <p>Importe de los pedidos con estado Pagado o Enviado.</p>
+                <div class="admin-revenue-info">
+                  <div><b>{numero(pagados.length)}</b><span>Compras confirmadas</span></div>
+                  <div><b>{numero(pendientes.length)}</b><span>Compras pendientes</span></div>
+                </div>
+              </article>
+              <article class="admin-panel admin-status-panel">
+                <div class="admin-panel-heading"><div><span class="admin-eyebrow">PEDIDOS</span><h2>Estado de las compras</h2></div></div>
+                <div class="admin-status-bars">
+                  {estados.map(estado => (
+                    <div class="admin-status-row">
+                      <div class="admin-status-row-head"><span>{estadoTexto[estado]}</span><b>{numero(conteos[estado])}</b></div>
+                      <div class="admin-track"><span class={`admin-fill s-${estado.toLowerCase()}`} style={`width: ${pedidos.length ? (conteos[estado] / pedidos.length) * 100 : 0}%`}></span></div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            </section>
+
+            <section class="admin-panel admin-section" id="productos">
+              <div class="admin-section-head">
+                <div><span class="admin-eyebrow">INVENTARIO</span><h2>Artículos</h2><p>Existencias disponibles y precio actual de cada producto.</p></div>
+                <div class="admin-filters">
+                  <label class="admin-search-label"><span class="sr-only">Buscar artículos</span><input id="admin-search" type="search" placeholder="Buscar un artículo..." autocomplete="off" /></label>
+                  <label><span class="sr-only">Filtrar por stock</span><select id="admin-stock-filter"><option value="todos">Todo el stock</option><option value="disponible">Disponible (más de 5)</option><option value="bajo">Stock bajo (1–5)</option><option value="agotado">Agotado</option></select></label>
+                </div>
+              </div>
+              <div class="admin-table-scroll">
+                <table class="admin-table" id="tabla-productos">
+                  <thead><tr><th>ARTÍCULO</th><th>CATEGORÍA</th><th>PRECIO</th><th>UNIDADES</th><th>ESTADO</th></tr></thead>
+                  <tbody>
+                    {productos.map(p => (
+                      <tr data-nombre={`${p.nombre} ${p.categoria?.nombre || ''}`.toLowerCase()} data-stock={p.stock}>
+                        <td><div class="admin-product-name"><span class="admin-product-initial">{p.nombre.charAt(0)}</span><span><b>{p.nombre}</b><small>SKU #{p.id}</small></span></div></td>
+                        <td>{p.categoria?.nombre || 'Sin categoría'}</td>
+                        <td class="admin-price">{precio(p.precio)}</td>
+                        <td><strong>{numero(p.stock)}</strong></td>
+                        <td>{p.stock === 0 ? <span class="admin-pill out">Agotado</span> : p.stock <= 5 ? <span class="admin-pill low">Stock bajo</span> : <span class="admin-pill good">Disponible</span>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p class="admin-empty" id="sin-productos" hidden>No hay artículos con esos filtros.</p>
+              <div class="admin-table-foot"><span id="contador-productos">{numero(productos.length)} artículos</span><span>Stock bajo: 5 unidades o menos</span></div>
+            </section>
+
+            <section class="admin-panel admin-section" id="categorias">
+              <div class="admin-section-head"><div><span class="admin-eyebrow">CATÁLOGO</span><h2>Categorías</h2><p>Cantidad de artículos y existencias por categoría.</p></div></div>
+              <div class="admin-categories">
+                {resumenCategorias.map((c, index) => (
+                  <div class="admin-category-card">
+                    <div class="admin-category-line"><span class="admin-category-symbol">{String(index + 1).padStart(2, '0')}</span><div><h3>{c.nombre}</h3><small>{numero(c.articulos)} artículos</small></div><strong>{numero(c.existencias)}<small>uds.</small></strong></div>
+                    <div class="admin-track"><span class="admin-fill category" style={`width: ${(c.existencias / maxCategoria) * 100}%`}></span></div>
+                  </div>
+                ))}
+                {resumenCategorias.length === 0 && <p class="admin-muted">Todavía no hay categorías registradas.</p>}
+              </div>
+            </section>
+
+            <section class="admin-panel admin-section" id="pedidos">
+              <div class="admin-section-head"><div><span class="admin-eyebrow">VENTAS</span><h2>Compras recientes</h2><p>Últimos {Math.min(75, pedidos.length)} pedidos, ordenados del más reciente al más antiguo.</p></div><div class="admin-filters"><label><span class="sr-only">Filtrar compras por estado</span><select id="admin-order-filter"><option value="todos">Todos los estados</option>{estados.map(e => <option value={e}>{estadoTexto[e]}</option>)}</select></label></div></div>
+              <div class="admin-table-scroll">
+                <table class="admin-table" id="tabla-pedidos">
+                  <thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>FECHA</th><th>PRODUCTOS</th><th>TOTAL</th><th>ESTADO</th></tr></thead>
+                  <tbody>
+                    {pedidosRecientes.map(p => (
+                      <tr data-estado={p.estado}>
+                        <td><span class="admin-order-id">#{p.id}</span></td>
+                        <td><b>{p.clienteNombre}</b><small class="admin-email">{p.clienteEmail}</small></td>
+                        <td>{fecha(p.fecha)}</td>
+                        <td><details class="admin-order-details"><summary>{numero(p.items.reduce((t, i) => t + i.cantidad, 0))} unidades · Ver</summary><ul>{p.items.map(i => <li>{i.cantidad} × {i.producto?.nombre || 'Artículo'}</li>)}</ul></details></td>
+                        <td class="admin-price">{precio(p.total)}</td>
+                        <td><span class={`admin-pill order-${p.estado.toLowerCase()}`}>{estadoTexto[p.estado] || p.estado}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p class="admin-empty" id="sin-pedidos" hidden>No hay compras con ese estado.</p>
+              <div class="admin-table-foot"><span id="contador-pedidos">Mostrando {numero(pedidosRecientes.length)} de {numero(pedidos.length)} pedidos</span><span>Los pendientes todavía no son pagos confirmados.</span></div>
+            </section>
+          </>
+        )}
+        <footer class="admin-footer">BETONOS · PANEL ADMINISTRATIVO <span>Los datos se obtienen de GraphQL / SQLite.</span></footer>
+      </main>
+    </div>
+    <script>
+      const buscador = document.querySelector<HTMLInputElement>('#admin-search')
+      const filtroStock = document.querySelector<HTMLSelectElement>('#admin-stock-filter')
+      const filasProductos = Array.from(document.querySelectorAll<HTMLTableRowElement>('#tabla-productos tbody tr'))
+      const contadorProductos = document.querySelector('#contador-productos')
+      const vacioProductos = document.querySelector<HTMLElement>('#sin-productos')
+      const filtroPedidos = document.querySelector<HTMLSelectElement>('#admin-order-filter')
+      const filasPedidos = Array.from(document.querySelectorAll<HTMLTableRowElement>('#tabla-pedidos tbody tr'))
+      const vacioPedidos = document.querySelector<HTMLElement>('#sin-pedidos')
+      const contadorPedidos = document.querySelector('#contador-pedidos')
+
+      function filtrarProductos() {
+        const texto = (buscador?.value || '').trim().toLocaleLowerCase('es-MX')
+        const filtro = filtroStock?.value || 'todos'
+        let visibles = 0
+        for (const fila of filasProductos) {
+          const stock = Number(fila.dataset.stock)
+          const coincide = (fila.dataset.nombre || '').includes(texto)
+          const estado = filtro === 'todos' ||
+            (filtro === 'disponible' && stock > 5) ||
+            (filtro === 'bajo' && stock > 0 && stock <= 5) ||
+            (filtro === 'agotado' && stock === 0)
+          fila.hidden = !(coincide && estado)
+          if (!fila.hidden) visibles++
+        }
+        if (contadorProductos) contadorProductos.textContent = `${visibles} de ${filasProductos.length} artículos`
+        if (vacioProductos) vacioProductos.hidden = visibles !== 0
+      }
+      buscador?.addEventListener('input', filtrarProductos)
+      filtroStock?.addEventListener('change', filtrarProductos)
+
+      filtroPedidos?.addEventListener('change', () => {
+        const estado = filtroPedidos.value
+        let visibles = 0
+        for (const fila of filasPedidos) {
+          fila.hidden = !(estado === 'todos' || fila.dataset.estado === estado)
+          if (!fila.hidden) visibles++
+        }
+        if (vacioPedidos) vacioPedidos.hidden = visibles !== 0
+        if (contadorPedidos) contadorPedidos.textContent = `${visibles} compras visibles (últimos ${filasPedidos.length} registros)`
+      })
+    </script>
+  </body>
+</html>

@@ -1,0 +1,253 @@
+---
+import { getSession } from 'auth-astro/server'
+import { consultarBackend } from '../lib/betonosServer'
+import '../styles/mi-cuenta.css'
+
+export const prerender = false
+
+const sesion = await getSession(Astro.request)
+if (!sesion?.user?.email) return Astro.redirect('/login')
+
+// La información de pedidos nunca debe guardarse en una caché compartida.
+Astro.response.headers.set('Cache-Control', 'private, no-store, max-age=0')
+Astro.response.headers.set('Vary', 'Cookie')
+
+const correo = sesion.user.email.trim().toLowerCase()
+const nombre = sesion.user.name?.trim() || correo.split('@')[0]
+const imagen = sesion.user.image?.startsWith('https://') ? sesion.user.image : null
+const correosAdmin = (import.meta.env.ADMIN_EMAILS || '')
+  .split(',').map((c: string) => c.trim().toLowerCase()).filter(Boolean)
+const esAdmin = correosAdmin.includes(correo)
+
+const tamanoPagina = 10
+const parametroPagina = Astro.url.searchParams.get('pagina') || '1'
+const pagina = /^\d+$/.test(parametroPagina)
+  ? Math.min(100000, Math.max(1, Number(parametroPagina))) : 1
+
+interface ArticuloPedido {
+  id: string
+  cantidad: number
+  precioUnitario: number
+  subtotal: number
+  producto: { id: string; nombre: string }
+}
+interface PedidoUsuario {
+  id: string
+  fecha: string
+  estado: 'PENDIENTE' | 'PAGADO' | 'ENVIADO' | 'CANCELADO'
+  estadoEnvio: 'SIN_INICIAR' | 'PREPARANDO' | 'EN_CAMINO' | 'ENTREGADO'
+  total: number
+  items: ArticuloPedido[]
+}
+interface ResumenUsuario {
+  totalPedidos: number
+  pedidosPagados: number
+  pedidosPendientes: number
+  totalGastado: number
+}
+
+const QUERY = `
+  query Cuenta($correo: String!, $limit: Int!, $offset: Int!) {
+    resumenMisPedidos(correo: $correo) {
+      totalPedidos pedidosPagados pedidosPendientes totalGastado
+    }
+    misPedidos(correo: $correo, limit: $limit, offset: $offset) {
+      id fecha estado estadoEnvio total
+      items {
+        id cantidad precioUnitario subtotal
+        producto { id nombre }
+      }
+    }
+  }
+`
+
+let resumen: ResumenUsuario = {
+  totalPedidos: 0, pedidosPagados: 0,
+  pedidosPendientes: 0, totalGastado: 0,
+}
+let pedidos: PedidoUsuario[] = []
+let hayMas = false
+let fallo = false
+
+try {
+  // IMPORTANTE: el correo proviene exclusivamente de getSession(), no de la URL.
+  const datos = await consultarBackend(QUERY, {
+    correo,
+    limit: tamanoPagina + 1,
+    offset: (pagina - 1) * tamanoPagina,
+  })
+  if (!Array.isArray(datos.misPedidos) || !datos.resumenMisPedidos) {
+    throw new Error('Respuesta incompleta de GraphQL')
+  }
+  resumen = datos.resumenMisPedidos
+  hayMas = datos.misPedidos.length > tamanoPagina
+  pedidos = datos.misPedidos.slice(0, tamanoPagina)
+} catch (error) {
+  console.error('[Panel de usuario Betonos]', error)
+  fallo = true
+}
+
+const dinero = (n: number) => new Intl.NumberFormat('es-MX', {
+  style: 'currency', currency: 'MXN',
+}).format(n)
+const fecha = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s)
+  ? s.split('-').reverse().join('/') : s
+const estadoPago: Record<string, string> = {
+  PENDIENTE: 'Pendiente de pago',
+  PAGADO: 'Pago confirmado',
+  ENVIADO: 'Pagado',
+  CANCELADO: 'Cancelado',
+}
+const estadoEntrega: Record<string, string> = {
+  SIN_INICIAR: 'Sin iniciar', PREPARANDO: 'Preparando',
+  EN_CAMINO: 'En camino', ENTREGADO: 'Entregado',
+}
+const estadosRuta = ['SIN_INICIAR', 'PREPARANDO', 'EN_CAMINO', 'ENTREGADO']
+const nombresRuta = ['Sin iniciar', 'Preparando', 'En camino', 'Entregado']
+---
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Work+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <title>Mi cuenta | Betonos</title>
+  </head>
+  <body class="cuenta-body">
+    <header class="cuenta-header">
+      <div class="cuenta-wrap cuenta-header-inner">
+        <a class="cuenta-logo" href="/">BE<span>TONOS</span></a>
+        <nav aria-label="Navegación de la cuenta">
+          <a class="cuenta-nav-activo" href="/mi-cuenta" aria-current="page">Mi cuenta</a>
+          {esAdmin && <a href="/admin">Administración</a>}
+          <a href="/">← Volver a la tienda</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="cuenta-wrap cuenta-main">
+      <section class="cuenta-intro">
+        <div>
+          <p class="cuenta-eyebrow">BETONOS / ÁREA DE CLIENTE</p>
+          <h1>Mi cuenta<span>.</span></h1>
+          <p>Consulta tus compras, revisa el pago y sigue el avance de tus pedidos.</p>
+        </div>
+        <a href="/mi-cuenta" class="cuenta-refresh">↻ Actualizar pedidos</a>
+      </section>
+
+      <section class="cuenta-perfil" aria-label="Datos de tu perfil">
+        {imagen ? (
+          <img class="cuenta-avatar" src={imagen} alt="Fotografía de perfil" referrerpolicy="no-referrer" />
+        ) : (
+          <div class="cuenta-avatar cuenta-avatar-letra" aria-hidden="true">{nombre[0]?.toUpperCase()}</div>
+        )}
+        <div>
+          <span class="cuenta-eyebrow">CUENTA DE GOOGLE</span>
+          <h2>{nombre}</h2>
+          <p>{correo}</p>
+        </div>
+        <span class="cuenta-perfil-badge">Sesión iniciada</span>
+      </section>
+
+      {fallo ? (
+        <section class="cuenta-error" role="alert">
+          <h2>No pudimos cargar tus compras</h2>
+          <p>Revisa que el backend GraphQL esté encendido, que ambos servidores tengan la misma clave privada y que hayas instalado las nuevas consultas del panel.</p>
+          <a href="/mi-cuenta">Reintentar</a>
+        </section>
+      ) : (
+        <>
+          <section class="cuenta-cifras" aria-label="Resumen de compras">
+            <article class="cuenta-cifra"><small>COMPRAS REALIZADAS</small><strong>{resumen.totalPedidos}</strong><span>Pedidos registrados</span></article>
+            <article class="cuenta-cifra"><small>PAGOS CONFIRMADOS</small><strong>{resumen.pedidosPagados}</strong><span>Compras pagadas</span></article>
+            <article class="cuenta-cifra"><small>PAGOS PENDIENTES</small><strong>{resumen.pedidosPendientes}</strong><span>Esperando confirmación</span></article>
+            <article class="cuenta-cifra"><small>TOTAL PAGADO</small><strong class="cuenta-precio">{dinero(resumen.totalGastado)}</strong><span>Pedidos confirmados</span></article>
+          </section>
+
+          <section class="cuenta-compras" aria-labelledby="cuenta-compras-titulo">
+            <div class="cuenta-compras-encabezado">
+              <div><span class="cuenta-eyebrow">HISTORIAL PERSONAL</span><h2 id="cuenta-compras-titulo">Mis compras</h2></div>
+              <span class="cuenta-pagina">Página {pagina}</span>
+            </div>
+
+            {pedidos.length === 0 ? (
+              <div class="cuenta-vacio">
+                <span class="cuenta-vacio-icono" aria-hidden="true">◇</span>
+                <h3>{pagina > 1 ? 'No hay compras en esta página' : 'Todavía no tienes compras'}</h3>
+                <p>{pagina > 1 ? 'Puedes regresar a la página anterior.' : 'Cuando inicies un pago, tu pedido aparecerá aquí como pendiente hasta que se confirme.'}</p>
+                <a href={pagina > 1 ? `/mi-cuenta?pagina=${pagina - 1}` : '/'}>{pagina > 1 ? '← Anterior' : 'Explorar productos →'}</a>
+              </div>
+            ) : (
+              <div class="cuenta-pedidos">
+                {pedidos.map(pedido => {
+                  const pagado = ['PAGADO', 'ENVIADO'].includes(pedido.estado)
+                  const progreso = pagado ? Math.max(0, estadosRuta.indexOf(pedido.estadoEnvio)) : -1
+                  return (
+                    <article class="cuenta-pedido">
+                      <div class="cuenta-pedido-top">
+                        <div><span class="cuenta-pedido-etiqueta">PEDIDO #{pedido.id}</span><p>Fecha: {fecha(pedido.fecha)}</p></div>
+                        <span class:list={['cuenta-estado', {
+                          'cuenta-estado-ok': pagado,
+                          'cuenta-estado-pendiente': pedido.estado === 'PENDIENTE',
+                          'cuenta-estado-cancelado': pedido.estado === 'CANCELADO',
+                        }]}>{estadoPago[pedido.estado] || pedido.estado}</span>
+                      </div>
+
+                      <div class="cuenta-pedido-resumen">
+                        <div><small>Artículos</small><strong>{pedido.items.reduce((total, item) => total + item.cantidad, 0)}</strong></div>
+                        <div><small>Entrega</small><strong>{pagado ? (estadoEntrega[pedido.estadoEnvio] || 'Sin iniciar') : 'Sin iniciar'}</strong></div>
+                        <div class="cuenta-pedido-total"><small>Total del pedido</small><strong>{dinero(pedido.total)}</strong></div>
+                      </div>
+
+                      {pagado ? (
+                        <div class="cuenta-seguimiento" aria-label={`Seguimiento del pedido ${pedido.id}`}>
+                          <p>Seguimiento de entrega</p>
+                          <ol>
+                            {estadosRuta.map((estado, i) => (
+                              <li class:list={{ 'cuenta-paso-activo': i <= progreso }}>
+                                <span class="cuenta-paso-punto" aria-hidden="true"></span>
+                                <span>{nombresRuta[i]}</span>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      ) : (
+                        <p class="cuenta-espera">{pedido.estado === 'PENDIENTE'
+                          ? 'El pago todavía no está confirmado. Si acabas de pagar, actualiza más tarde.'
+                          : 'El pedido fue cancelado; no tiene un envío activo.'}</p>
+                      )}
+
+                      <details class="cuenta-detalle">
+                        <summary>Ver artículos comprados <span aria-hidden="true">⌄</span></summary>
+                        <div class="cuenta-lineas">
+                          {pedido.items.map(item => (
+                            <div class="cuenta-linea">
+                              <div><strong>{item.producto.nombre}</strong><small>{item.cantidad} × {dinero(item.precioUnitario)}</small></div>
+                              <strong>{dinero(item.subtotal)}</strong>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    </article>
+                  )
+                })}
+              </div>
+            )}
+
+            {(pagina > 1 || hayMas) && (
+              <nav class="cuenta-paginacion" aria-label="Páginas de compras">
+                {pagina > 1 && <a href={`/mi-cuenta?pagina=${pagina - 1}`}>← Anterior</a>}
+                <span>Página {pagina}</span>
+                {hayMas && <a href={`/mi-cuenta?pagina=${pagina + 1}`}>Siguiente →</a>}
+              </nav>
+            )}
+          </section>
+        </>
+      )}
+    </main>
+    <footer class="cuenta-footer">BETONOS · MI CUENTA · <a href="/">Volver a la tienda</a></footer>
+  </body>
+</html>

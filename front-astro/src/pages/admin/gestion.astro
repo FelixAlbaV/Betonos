@@ -1,0 +1,195 @@
+---
+import { getSession } from 'auth-astro/server'
+import { consultarBackend } from '../../lib/betonosServer'
+import '../../styles/admin-gestion.css'
+
+export const prerender = false
+const sesion = await getSession(Astro.request)
+if (!sesion?.user?.email) return Astro.redirect('/login')
+const correo = sesion.user.email.trim().toLowerCase()
+const permitidos = (import.meta.env.ADMIN_EMAILS || '').split(',')
+  .map((s: string) => s.trim().toLowerCase()).filter(Boolean)
+if (!permitidos.includes(correo)) {
+  return new Response('403 — Solo los administradores pueden editar Betonos.', {
+    status: 403,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+  })
+}
+Astro.response.headers.set('Cache-Control', 'private, no-store, max-age=0')
+
+type Categoria = { id: string; nombre: string; descripcion: string }
+type Producto = { id: string; nombre: string; descripcion: string; imagen: string; precio: number; stock: number; categoria: { id: string; nombre: string } }
+type Pedido = { id: string; clienteNombre: string; clienteEmail: string; fecha: string; total: number; estado: string; estadoEnvio: string }
+const qCategorias = `query { categorias { id nombre descripcion } }`
+const qProductos = `query($limite: Int!, $inicio: Int!) { productos(limit: $limite, offset: $inicio) { id nombre descripcion imagen precio stock categoria { id nombre } } }`
+const qPedidos = `query($limite: Int!, $inicio: Int!) { pedidos(limit: $limite, offset: $inicio) { id clienteNombre clienteEmail fecha total estado estadoEnvio } }`
+async function todos<T>(q: string, nombre: string): Promise<T[]> {
+  const salida: T[] = []
+  for (let n = 0; n < 200; n++) {
+    const datos = await consultarBackend(q, { limite: 100, inicio: 100 * n })
+    const lote = datos[nombre] as T[]
+    if (!Array.isArray(lote)) throw Error(`No se pudo leer ${nombre}`)
+    salida.push(...lote)
+    if (lote.length < 100) return salida
+  }
+  throw Error(`Demasiados registros en ${nombre}`)
+}
+let categorias: Categoria[] = []
+let productos: Producto[] = []
+let pedidos: Pedido[] = []
+let fallo = ''
+try {
+  const [res, p, pe] = await Promise.all([
+    consultarBackend(qCategorias), todos<Producto>(qProductos, 'productos'), todos<Pedido>(qPedidos, 'pedidos'),
+  ])
+  categorias = res.categorias
+  productos = p
+  pedidos = pe
+} catch (e) {
+  console.error('[Gestión Betonos]', e)
+  fallo = 'No se pudieron cargar los datos. Verifica el backend, la clave interna y las nuevas mutaciones de GraphQL.'
+}
+const pesos = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n)
+const envios = [
+  { valor: 'SIN_INICIAR', texto: 'Sin iniciar' },
+  { valor: 'PREPARANDO', texto: 'Preparando' },
+  { valor: 'EN_CAMINO', texto: 'En camino' },
+  { valor: 'ENTREGADO', texto: 'Entregado' },
+]
+---
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Administrar tienda | Betonos</title>
+  </head>
+  <body class="crud-body">
+    <header class="crud-header">
+      <div class="crud-wrap crud-header-inner">
+        <a class="crud-logo" href="/admin">BETONOS <span>ADMIN</span></a>
+        <nav aria-label="Administración">
+          <a href="/admin">← Dashboard</a>
+          <a href="/">Tienda</a>
+        </nav>
+      </div>
+    </header>
+    <main class="crud-wrap">
+      <div class="crud-title"><div><small>CATÁLOGO · INVENTARIO · COMPRAS</small><h1>Administrar tienda<span>.</span></h1><p>Los cambios se guardan en GraphQL / SQLite. Las compras solo cambian de estado cuando el proveedor de pagos las confirma.</p></div></div>
+      <nav class="crud-tabs" aria-label="Secciones">
+        <a href="#productos">Artículos</a><a href="#categorias">Categorías</a><a href="#compras">Compras y envíos</a>
+      </nav>
+      <div id="crud-aviso" class="crud-aviso" role="status" aria-live="polite" hidden></div>
+      {fallo ? <section class="crud-panel"><p role="alert">{fallo}</p></section> : <>
+        <section id="productos" class="crud-section">
+          <div class="crud-section-head"><div><small>01 / PRODUCTOS</small><h2>Artículos e inventario</h2><p>{productos.length} productos registrados · Agrega, edita o elimina sin cambiar el carrito.</p></div></div>
+          <details class="crud-panel crud-create" open>
+            <summary>+ Crear nuevo artículo</summary>
+            <form data-accion="producto.crear" class="crud-form">
+              <label>Nombre<input name="nombre" required maxlength="120" placeholder="Ej. Audífonos Premium" /></label>
+              <label>Categoría<select name="categoriaId" required>{categorias.map(c => <option value={c.id}>{c.nombre}</option>)}</select></label>
+              <label>Precio MXN<input name="precio" type="number" min="0.01" max="10000000" step="0.01" required placeholder="499.00" /></label>
+              <label>Unidades en stock<input name="stock" type="number" min="0" max="1000000" step="1" required value="0" /></label>
+              <label class="crud-span2">Imagen (nombre de archivo o URL)<input name="imagen" maxlength="1500" placeholder="audifonos-nuevos.jpg" /></label>
+              <label class="crud-span2">Descripción<textarea name="descripcion" maxlength="3000" rows="2"></textarea></label>
+              <div class="crud-actions crud-span2"><button type="submit" disabled={categorias.length === 0}>Crear producto</button></div>
+            </form>
+            {categorias.length === 0 && <p>Primero crea una categoría.</p>}
+          </details>
+          <div class="crud-panel crud-table-wrap">
+            <table class="crud-table">
+              <thead><tr><th>Artículo</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead>
+              <tbody>{productos.map(p => <tr>
+                <td><strong>{p.nombre}</strong><small>#{p.id}</small></td>
+                <td>{p.categoria.nombre}</td>
+                <td>{pesos(p.precio)}</td>
+                <td><span class:list={['crud-chip', { 'crud-zero': p.stock === 0, 'crud-low': p.stock > 0 && p.stock <= 5 }]}>{p.stock} uds.</span></td>
+                <td><details class="crud-editor"><summary>Editar</summary>
+                  <form class="crud-form" data-accion="producto.editar">
+                    <input type="hidden" name="id" value={p.id} />
+                    <label>Nombre<input name="nombre" maxlength="120" value={p.nombre} required /></label>
+                    <label>Categoría<select name="categoriaId" required>{categorias.map(c => <option value={c.id} selected={c.id === p.categoria.id}>{c.nombre}</option>)}</select></label>
+                    <label>Precio<input name="precio" type="number" min="0.01" step="0.01" value={p.precio} required /></label>
+                    <label>Stock<input name="stock" type="number" min="0" step="1" value={p.stock} required /></label>
+                    <label class="crud-span2">Imagen<input name="imagen" maxlength="1500" value={p.imagen} /></label>
+                    <label class="crud-span2">Descripción<textarea name="descripcion" maxlength="3000" rows="3">{p.descripcion}</textarea></label>
+                    <div class="crud-actions crud-span2"><button type="submit">Guardar cambios</button></div>
+                  </form>
+                  <form class="crud-delete" data-accion="producto.eliminar"><input type="hidden" name="id" value={p.id} /><button class="crud-danger" type="submit">Eliminar artículo</button></form>
+                </details></td>
+              </tr>)}</tbody>
+            </table>
+            {productos.length === 0 && <p class="crud-empty">Todavía no hay artículos.</p>}
+          </div>
+        </section>
+        <section id="categorias" class="crud-section">
+          <div class="crud-section-head"><div><small>02 / CLASIFICACIÓN</small><h2>Categorías</h2><p>Las categorías que tienen productos no pueden eliminarse hasta moverlos a otra.</p></div></div>
+          <div class="crud-panel"><h3>Nueva categoría</h3>
+            <form data-accion="categoria.crear" class="crud-form">
+              <label>Nombre<input name="nombre" maxlength="80" required placeholder="Nueva categoría" /></label>
+              <label>Descripción<input name="descripcion" maxlength="1000" placeholder="Descripción de la categoría" /></label>
+              <div class="crud-actions crud-span2"><button type="submit">Crear categoría</button></div>
+            </form>
+          </div>
+          <div class="crud-categories">{categorias.map(c => <article class="crud-panel">
+            <div class="crud-category-head"><div><h3>{c.nombre}</h3><p>{c.descripcion}</p></div><span>{productos.filter(p => p.categoria.id === c.id).length} productos</span></div>
+            <details class="crud-editor"><summary>Editar categoría</summary>
+              <form data-accion="categoria.editar" class="crud-form">
+                <input type="hidden" name="id" value={c.id}/>
+                <label>Nombre<input name="nombre" value={c.nombre} maxlength="80" required /></label>
+                <label>Descripción<input name="descripcion" value={c.descripcion} maxlength="1000" /></label>
+                <div class="crud-actions crud-span2"><button type="submit">Guardar categoría</button></div>
+              </form>
+              <form data-accion="categoria.eliminar" class="crud-delete"><input type="hidden" name="id" value={c.id} /><button type="submit" class="crud-danger" disabled={productos.some(p => p.categoria.id === c.id)}>Eliminar categoría</button></form>
+            </details>
+          </article>)}</div>
+        </section>
+        <section id="compras" class="crud-section">
+          <div class="crud-section-head"><div><small>03 / SEGUIMIENTO</small><h2>Compras y envíos</h2><p>Solo puedes preparar y enviar compras pagadas. El cobro lo confirman Stripe o Mercado Pago.</p></div></div>
+          <div class="crud-panel crud-table-wrap"><table class="crud-table"><thead><tr><th>Pedido</th><th>Comprador</th><th>Total</th><th>Pago</th><th>Envío</th></tr></thead>
+            <tbody>{pedidos.map(p => <tr>
+              <td><strong>#{p.id}</strong><small>{p.fecha}</small></td>
+              <td>{p.clienteNombre}<small>{p.clienteEmail}</small></td>
+              <td>{pesos(p.total)}</td>
+              <td><span class="crud-chip">{p.estado}</span></td>
+              <td>{['PAGADO', 'ENVIADO'].includes(p.estado) ? <form data-accion="pedido.envio" class="crud-shipping"><input type="hidden" name="id" value={p.id}/><select name="estado" aria-label={`Estado de envío del pedido ${p.id}`}>{envios.map(e => <option value={e.valor} selected={p.estadoEnvio === e.valor}>{e.texto}</option>)}</select><button type="submit">Guardar</button></form> : <span class="crud-muted">Sin pago confirmado</span>}</td>
+            </tr>)}</tbody></table>
+            {pedidos.length === 0 && <p class="crud-empty">Aún no se han registrado compras.</p>}
+          </div>
+        </section>
+      </>}
+      <footer class="crud-footer">BETONOS · ADMINISTRACIÓN SEGURA · <a href="/admin">Volver al dashboard</a></footer>
+    </main>
+    <script>
+      const aviso = document.querySelector<HTMLElement>('#crud-aviso')
+      for (const form of document.querySelectorAll<HTMLFormElement>('form[data-accion]')) {
+        form.addEventListener('submit', async (evento) => {
+          evento.preventDefault()
+          const accion = form.dataset.accion || ''
+          if (accion.endsWith('.eliminar') && !window.confirm('¿Eliminar este registro definitivamente?')) return
+          const boton = form.querySelector<HTMLButtonElement>('button[type="submit"]')
+          const body = Object.fromEntries(new FormData(form).entries())
+          if (boton) boton.disabled = true
+          try {
+            const respuesta = await fetch('/api/admin/gestion', {
+              method: 'POST', credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...body, accion }),
+            })
+            const data = await respuesta.json()
+            if (!respuesta.ok || !data.ok) throw Error(data.error || 'No se pudo guardar.')
+            window.location.reload()
+          } catch (e) {
+            if (aviso) {
+              aviso.hidden = false
+              aviso.textContent = e instanceof Error ? e.message : 'Error inesperado'
+              aviso.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+            if (boton) boton.disabled = false
+          }
+        })
+      }
+    </script>
+  </body>
+</html>

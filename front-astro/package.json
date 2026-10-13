@@ -19,8 +19,10 @@
     "@types/react-dom": "^19.3.0",
     "astro": "^7.3.5",
     "auth-astro": "^4.2.0",
+    "mercadopago": "^3.6.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "stripe": "^23.0.0",
     "zustand": "^5.0.15"
   },
   "allowScripts": {

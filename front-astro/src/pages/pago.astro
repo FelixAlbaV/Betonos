@@ -1,0 +1,58 @@
+---
+import { getSession } from 'auth-astro/server'
+import { consultarBackend, PEDIDO_DETALLE } from '../lib/betonosServer'
+
+const sesion = await getSession(Astro.request)
+if (!sesion?.user?.email) return Astro.redirect('/login')
+
+const id = Astro.url.searchParams.get('pedido')
+let estado = 'SIN_PEDIDO'
+let total = 0
+let mensaje = ''
+
+if (id && /^\d+$/.test(id)) {
+  try {
+    const { pedido } = await consultarBackend(PEDIDO_DETALLE, { id })
+    if (!pedido || pedido.clienteEmail.toLowerCase() !== sesion.user.email.toLowerCase()) {
+      estado = 'SIN_PEDIDO'
+    } else {
+      estado = pedido.estado
+      total = pedido.total
+    }
+  } catch (error) {
+    estado = 'ERROR'
+    mensaje = 'No se pudo consultar el servidor de pedidos.'
+    console.error(error)
+  }
+}
+
+const pagado = estado === 'PAGADO'
+const encabezado = pagado ? '¡Pago confirmado!' :
+  estado === 'PENDIENTE' ? 'Pago por verificar' :
+  estado === 'CANCELADO' ? 'Pedido cancelado' : 'No se encontró el pedido'
+---
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Estado del pago | Betonos</title>
+    <style>
+      body { min-height: 100vh; display: grid; place-items: center; margin: 0;
+        background: #111; color: white; font-family: system-ui, sans-serif; }
+      main { max-width: 540px; padding: 2rem; border: 1px solid #555; border-radius: 18px; text-align: center; }
+      a { color: #ffe092; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>{encabezado}</h1>
+      {id && estado !== 'SIN_PEDIDO' && <p>Pedido #{id}</p>}
+      {pagado ? <p>Total pagado: {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(total)}</p>
+        : estado === 'PENDIENTE' ? <p>Mercado Pago todavía no confirma el cobro. Actualiza en unos momentos.</p>
+        : <p>{mensaje || 'Puedes volver a la tienda y revisar tu compra.'}</p>}
+      {estado === 'PENDIENTE' && <p><a href={Astro.url.pathname + Astro.url.search}>Actualizar estado</a></p>}
+      <a href="/">Volver a Betonos</a>
+    </main>
+    {pagado && <script is:inline>localStorage.removeItem('betonos-carrito');</script>}
+  </body>
+</html>
