@@ -1,7 +1,8 @@
 // src/store/cartStore.js
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
-export const useCartStore = create((set, get) => ({
+export const useCartStore = create(persist((set, get) => ({
   items: [], // { id, nombre, precio, imagen, cantidad, stock }
 
   agregarItem: (producto) => {
@@ -37,4 +38,7 @@ export const useCartStore = create((set, get) => ({
   // Selectores derivados
   totalItems: () => get().items.reduce((suma, i) => suma + i.cantidad, 0),
   totalPrecio: () => get().items.reduce((suma, i) => suma + i.cantidad * i.precio, 0),
+}), {
+  name: 'betonos-carrito',
+  partialize: ({ items }) => ({ items })
 }))

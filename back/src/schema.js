@@ -34,7 +34,15 @@ export const typeDefs = `#graphql
     subtotal: Float!
   }
 
+  enum EstadoEnvio {
+    SIN_INICIAR
+    PREPARANDO
+    EN_CAMINO
+    ENTREGADO
+  }
+
   type Pedido {
+    estadoEnvio: EstadoEnvio!
     id: ID!
     clienteNombre: String!
     clienteEmail: String!
@@ -42,6 +50,11 @@ export const typeDefs = `#graphql
     estado: EstadoPedido!
     total: Float!
     items: [PedidoItem!]!
+  }
+
+  input CategoriaInput {
+    nombre: String!
+    descripcion: String!
   }
 
   input ProductoInput {
@@ -65,7 +78,16 @@ export const typeDefs = `#graphql
     items: [PedidoItemInput!]!
   }
 
+  type ResumenMisPedidos {
+    totalPedidos: Int!
+    pedidosPagados: Int!
+    pedidosPendientes: Int!
+    totalGastado: Float!
+  }
+
   type Query {
+    misPedidos(correo: String!, limit: Int!, offset: Int!): [Pedido!]!
+    resumenMisPedidos(correo: String!): ResumenMisPedidos!
     categorias: [Categoria!]!
     categoria(id: ID!): Categoria
 
@@ -78,6 +100,10 @@ export const typeDefs = `#graphql
   }
 
   type Mutation {
+    crearCategoria(input: CategoriaInput!): Categoria!
+    actualizarCategoria(id: ID!, input: CategoriaInput!): Categoria!
+    eliminarCategoria(id: ID!): Boolean!
+    actualizarEnvio(pedidoId: ID!, estado: EstadoEnvio!): EstadoEnvio!
     # CRUD de productos
     crearProducto(input: ProductoInput!): Producto!
     actualizarProducto(id: ID!, input: ProductoInput!): Producto!
@@ -88,5 +114,7 @@ export const typeDefs = `#graphql
 
     "Mutation de negocio: avanza o cambia el estado de un pedido."
     actualizarEstadoPedido(id: ID!, estado: EstadoPedido!): Pedido!
+    confirmarPagoMercadoPago(pedidoId: ID!, paymentId: String!, monto: Float!, moneda: String!): Pedido!
+    confirmarPagoStripe(pedidoId: ID!, sesionId: String!, montoCentavos: Int!, moneda: String!): Pedido!
   }
 `

@@ -18,6 +18,7 @@ export function TopBar({ onIrAHome, onIrACarrito, user }) {
 
       <div className={estilos.acciones}>
         {user && <span className={estilos.usuario}>{user.name}</span>}
+        {user && <a href="/mi-cuenta" className={estilos.usuario} style={{ textDecoration: 'none', fontWeight: 700 }}>Mi cuenta</a>}
         <button className={estilos.logout} onClick={() => signOut()}>
           Cerrar sesión
         </button>

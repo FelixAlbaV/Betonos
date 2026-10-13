@@ -1,0 +1,75 @@
+/* Estilos exclusivos de /mi-cuenta: no modifican el dashboard ni la tienda. */
+:root{--cuenta-bg:#100e0e;--cuenta-panel:#1b1816;--cuenta-linea:#3a302a;--cuenta-text:#f5eee7;--cuenta-muted:#a99a8e;--cuenta-red:#ea6445;--cuenta-gold:#eec37d}
+*{box-sizing:border-box}
+body.cuenta-body{margin:0;min-height:100vh;color:var(--cuenta-text);background:var(--cuenta-bg);font:14px/1.55 'Work Sans',system-ui,sans-serif}
+.cuenta-body a{color:inherit}.cuenta-body button,.cuenta-body input{font:inherit}
+.cuenta-body :focus-visible{outline:2px solid var(--cuenta-gold);outline-offset:3px}
+.cuenta-wrap{max-width:1160px;margin:0 auto;padding:0 28px}
+.cuenta-header{border-bottom:1px solid var(--cuenta-linea);background:#171310}
+.cuenta-header-inner{min-height:78px;display:flex;justify-content:space-between;align-items:center;gap:24px}
+.cuenta-logo{font:36px/1 'Bebas Neue',sans-serif;text-decoration:none;letter-spacing:.055em;white-space:nowrap}
+.cuenta-logo span{color:var(--cuenta-red)}
+.cuenta-header nav{display:flex;gap:26px;align-items:center;flex-wrap:wrap}
+.cuenta-header nav a{font-weight:700;text-decoration:none;font-size:12px;color:#c5b8ac}
+.cuenta-header nav a:hover,.cuenta-header nav a.cuenta-nav-activo{color:var(--cuenta-gold)}
+.cuenta-main{padding-top:43px;padding-bottom:65px}
+.cuenta-intro{display:flex;justify-content:space-between;align-items:end;gap:24px;margin-bottom:28px}
+.cuenta-eyebrow{font-size:10px;font-weight:800;letter-spacing:.23em;color:var(--cuenta-gold)}
+.cuenta-intro h1{font:clamp(54px,6vw,84px)/1 'Bebas Neue',sans-serif;letter-spacing:.04em;margin:8px 0 3px}
+.cuenta-intro h1 span{color:var(--cuenta-red)}
+.cuenta-intro p:last-child{color:var(--cuenta-muted);margin:8px 0 0}
+.cuenta-refresh{white-space:nowrap;align-self:end;border:1px solid var(--cuenta-linea);padding:11px 16px;border-radius:8px;text-decoration:none;font-weight:700;font-size:12px}
+.cuenta-refresh:hover{border-color:var(--cuenta-gold)}
+.cuenta-perfil{display:flex;gap:18px;align-items:center;border:1px solid var(--cuenta-linea);border-radius:12px;background:var(--cuenta-panel);padding:24px;margin-bottom:23px}
+.cuenta-avatar{width:68px;height:68px;object-fit:cover;border-radius:50%;background:#493025;flex:none}
+.cuenta-avatar-letra{display:grid;place-items:center;color:var(--cuenta-gold);font:40px 'Bebas Neue',sans-serif}
+.cuenta-perfil h2{margin:3px 0;font:30px/1.1 'Bebas Neue',sans-serif;letter-spacing:.035em}
+.cuenta-perfil p{margin:0;color:var(--cuenta-muted);overflow-wrap:anywhere}
+.cuenta-perfil-badge{margin-left:auto;border-radius:999px;border:1px solid #43684a;padding:6px 11px;color:#9fdbad;font-size:11px;font-weight:700;white-space:nowrap}
+.cuenta-cifras{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:45px}
+.cuenta-cifra{background:var(--cuenta-panel);border:1px solid var(--cuenta-linea);border-radius:11px;padding:23px;min-width:0}
+.cuenta-cifra small{display:block;font-size:10px;letter-spacing:.12em;color:var(--cuenta-gold);font-weight:800}
+.cuenta-cifra strong{display:block;font:48px/1 'Bebas Neue',sans-serif;margin:14px 0 8px}
+.cuenta-cifra strong.cuenta-precio{font-size:clamp(27px,2.4vw,40px);white-space:normal;overflow-wrap:anywhere}
+.cuenta-cifra span{font-size:12px;color:var(--cuenta-muted)}
+.cuenta-compras-encabezado{display:flex;justify-content:space-between;align-items:end;gap:16px;margin-bottom:19px}
+.cuenta-compras-encabezado h2{margin:4px 0 0;font:43px/1 'Bebas Neue',sans-serif;letter-spacing:.03em}
+.cuenta-pagina{font-size:12px;color:var(--cuenta-muted)}
+.cuenta-pedidos{display:grid;gap:17px}
+.cuenta-pedido{background:var(--cuenta-panel);border:1px solid var(--cuenta-linea);border-radius:12px;overflow:hidden}
+.cuenta-pedido-top{padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:18px;border-bottom:1px solid var(--cuenta-linea)}
+.cuenta-pedido-etiqueta{font-weight:800;letter-spacing:.07em;font-size:14px}
+.cuenta-pedido-top p{color:var(--cuenta-muted);font-size:12px;margin:3px 0 0}
+.cuenta-estado{font-size:11px;font-weight:800;color:#b9b6b3;background:#403c38;padding:8px 11px;border-radius:99px;white-space:nowrap}
+.cuenta-estado-ok{color:#a4e1ae;background:#214a32}.cuenta-estado-pendiente{color:#f8d48b;background:#503c26}.cuenta-estado-cancelado{color:#ffada8;background:#502b2a}
+.cuenta-pedido-resumen{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:12px;padding:23px 24px}
+.cuenta-pedido-resumen small{display:block;color:var(--cuenta-muted);font-size:11px;margin-bottom:5px}
+.cuenta-pedido-resumen strong{font-size:15px}
+.cuenta-pedido-total{text-align:right}.cuenta-pedido-total strong{font-size:21px;color:var(--cuenta-gold)}
+.cuenta-seguimiento{margin:0 24px 22px;border-radius:9px;background:#13110f;padding:17px}
+.cuenta-seguimiento>p{margin:0 0 18px;color:var(--cuenta-muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.09em}
+.cuenta-seguimiento ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,1fr)}
+.cuenta-seguimiento li{font-size:11px;color:#85786e;position:relative;padding:22px 4px 0;text-align:center}
+.cuenta-seguimiento li:not(:last-child)::after{content:'';position:absolute;height:2px;background:var(--cuenta-linea);width:calc(100% - 23px);left:calc(50% + 11px);top:7px}
+.cuenta-paso-punto{position:absolute;top:1px;left:calc(50% - 7px);width:14px;height:14px;background:#64554b;border:3px solid #13110f;border-radius:50%;z-index:1}
+.cuenta-seguimiento li.cuenta-paso-activo{color:var(--cuenta-gold)}
+.cuenta-seguimiento li.cuenta-paso-activo .cuenta-paso-punto{background:var(--cuenta-red)}
+.cuenta-seguimiento li.cuenta-paso-activo:not(:last-child)::after{background:var(--cuenta-red)}
+.cuenta-espera{margin:0 24px 20px;padding:13px 16px;border-radius:8px;background:#2b241b;color:#ddc5a6;font-size:12px}
+.cuenta-detalle{border-top:1px solid var(--cuenta-linea)}
+.cuenta-detalle summary{padding:16px 24px;cursor:pointer;font-size:12px;font-weight:800;display:flex;justify-content:space-between;align-items:center}
+.cuenta-detalle summary:hover{background:#2b2520}
+.cuenta-detalle[open] summary{color:var(--cuenta-gold)}
+.cuenta-lineas{padding:2px 24px 20px}
+.cuenta-linea{display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:1px solid #332b26;padding:15px 0}
+.cuenta-linea:last-child{border-bottom:0}
+.cuenta-linea strong{font-size:13px}.cuenta-linea small{display:block;color:var(--cuenta-muted);font-size:11px;margin-top:4px}
+.cuenta-vacio,.cuenta-error{text-align:center;background:var(--cuenta-panel);border:1px solid var(--cuenta-linea);border-radius:12px;padding:56px 24px}
+.cuenta-vacio-icono{display:block;font-size:65px;color:var(--cuenta-gold)}
+.cuenta-vacio h3,.cuenta-error h2{font:35px 'Bebas Neue',sans-serif;margin:10px 0}
+.cuenta-vacio p,.cuenta-error p{max-width:530px;color:var(--cuenta-muted);margin:0 auto 25px}
+.cuenta-vacio a,.cuenta-error a,.cuenta-paginacion a{display:inline-block;border:1px solid var(--cuenta-gold);color:var(--cuenta-gold);border-radius:8px;padding:10px 16px;text-decoration:none;font-weight:700;font-size:12px}
+.cuenta-paginacion{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:26px}.cuenta-paginacion span{color:var(--cuenta-muted)}
+.cuenta-footer{text-align:center;padding:26px;color:var(--cuenta-muted);border-top:1px solid var(--cuenta-linea);font-size:12px}.cuenta-footer a{color:var(--cuenta-gold)}
+@media(max-width:800px){.cuenta-cifras{grid-template-columns:repeat(2,minmax(0,1fr))}.cuenta-intro{align-items:start;flex-direction:column}.cuenta-refresh{align-self:start}}
+@media(max-width:550px){.cuenta-wrap{padding-inline:16px}.cuenta-header-inner{padding-top:15px;padding-bottom:15px;align-items:start;flex-direction:column}.cuenta-header nav{gap:14px}.cuenta-perfil{flex-wrap:wrap}.cuenta-perfil-badge{margin:0}.cuenta-cifra{padding:16px}.cuenta-cifra strong{font-size:38px}.cuenta-cifra strong.cuenta-precio{font-size:25px}.cuenta-pedido-top{flex-direction:column;align-items:start}.cuenta-pedido-resumen{grid-template-columns:repeat(2,1fr)}.cuenta-pedido-total{text-align:left;grid-column:1/-1}.cuenta-seguimiento{margin-inline:13px}.cuenta-seguimiento li{font-size:9px}.cuenta-detalle summary{padding-inline:18px}}
