@@ -1,6 +1,6 @@
 ---
 import { getSession } from 'auth-astro/server'
-import { consultarBackend, PEDIDO_DETALLE } from '../lib/betonosServer'
+import { consultarBackend, CONSULTAR_PEDIDO as PEDIDO_DETALLE } from '../lib/betonosServer'
 
 const sesion = await getSession(Astro.request)
 if (!sesion?.user?.email) return Astro.redirect('/login')
