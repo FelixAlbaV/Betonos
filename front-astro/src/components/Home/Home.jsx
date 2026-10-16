@@ -1,21 +1,19 @@
+// BETONOS_HIDRATACION_SELECTIVA
 // src/components/Home/Home.jsx
 import { Sidebar } from '../Sidebar/Sidebar'
-import { Hero } from '../Hero/Hero'
-import { ContextBar } from '../ContextBar/ContextBar'
-import { Experiencia } from '../Experiencia/Experiencia'
 import estilos from './Home.module.css'
 
 // Home compone: Sidebar (categorías) + Hero + ContextBar + grid principal.
 // TopBar y Footer viven en App.jsx porque son comunes a todas las vistas.
-export function Home({ categorias, onSeleccionarCategoria }) {
+export function Home({ categorias, onSeleccionarCategoria, hero, contextBar, experiencia }) {
   return (
     <div className={estilos.layout}>
       <Sidebar categorias={categorias} categoriaActivaId={null} onSeleccionar={onSeleccionarCategoria} />
 
       <main className={estilos.principal}>
-        <Hero />
-        <ContextBar />
-        <Experiencia />
+        {hero}
+        {contextBar}
+        {experiencia}
 
         <h3 className={estilos.destacadosTitulo}>Explora por categoría</h3>
         <div className={estilos.gridCategorias}>

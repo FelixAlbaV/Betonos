@@ -25,12 +25,13 @@ console.log('[BACKEND ENV]', {
 
 
 if (!tablasExisten()) {
-  instalarPagosStripe(resolvers)
-  instalarPagos(resolvers)
   console.log('⚠️  No se encontró la base de datos. Ejecuta primero: npm run seed')
   process.exit(1)
 }
 
+// Los resolvers de pago deben instalarse cuando SÍ existe la base de datos.
+instalarPagos(resolvers)
+instalarPagosStripe(resolvers)
 instalarAdminCrud(resolvers)
 
 instalarPanelUsuario(resolvers)

@@ -95,7 +95,7 @@ export function instalarPagos(resolvers) {
 
   resolvers.Mutation.confirmarPagoMercadoPago = (_p, { pedidoId, paymentId, monto, moneda }, contexto) => {
     accesoInterno(contexto)
-    if (!/^\d+$/.test(String(paymentId)) || moneda !== 'MXN' ||
+    if (!/^(?:\d+|[A-Z0-9][A-Z0-9_-]{9,99})$/.test(String(paymentId)) || moneda !== 'MXN' ||
         !Number.isFinite(monto)) throw new GraphQLError('Datos de pago inválidos.')
 
     const confirmar = db.transaction(() => {

@@ -8,7 +8,7 @@ import { Skeleton } from '../Skeleton/Skeleton'
 import { obtenerImagenProducto } from '../../utils/imagenesProductos'
 import estilos from './ProductoDetalle.module.css'
 
-export function ProductoDetalle({ productoId, onCerrar }) {
+export function ProductoDetalle({ productoId, onCerrar, user }) {
   const [producto, setProducto] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
@@ -39,9 +39,14 @@ export function ProductoDetalle({ productoId, onCerrar }) {
   }, [productoId])
 
   function manejarAgregar() {
-    agregarItem(producto)
-    setAgregado(true)
+  if (!user) {
+    window.location.assign('/login')
+    return
   }
+
+  agregarItem(producto)
+  setAgregado(true)
+}
 
   // Cierra el modal con la tecla Escape (evento de teclado a nivel documento).
   useEffect(() => {
@@ -99,7 +104,7 @@ export function ProductoDetalle({ productoId, onCerrar }) {
                   onClick={manejarAgregar}
                   disabled={producto.stock === 0}
                 >
-                  {producto.stock === 0 ? 'Agotado' : 'Agregar al carrito'}
+                  {producto.stock === 0 ? 'Agotado' : user ? 'Agregar al carrito' : 'Inicia sesión para agregar'}
                 </button>
                 {agregado && <p className={estilos.confirmacion}>Se agregó al carrito ✓</p>}
               </div>

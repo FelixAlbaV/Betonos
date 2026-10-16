@@ -48,7 +48,7 @@ const encabezado = pagado ? '¡Pago confirmado!' :
       <h1>{encabezado}</h1>
       {id && estado !== 'SIN_PEDIDO' && <p>Pedido #{id}</p>}
       {pagado ? <p>Total pagado: {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(total)}</p>
-        : estado === 'PENDIENTE' ? <p>Mercado Pago todavía no confirma el cobro. Actualiza en unos momentos.</p>
+        : estado === 'PENDIENTE' ? <p>Tu proveedor de pago todavía no confirma el cobro. Actualiza en unos momentos; no hagas otro pago mientras verificamos este pedido.</p>
         : <p>{mensaje || 'Puedes volver a la tienda y revisar tu compra.'}</p>}
       {estado === 'PENDIENTE' && <p><a href={Astro.url.pathname + Astro.url.search}>Actualizar estado</a></p>}
       <a href="/">Volver a Betonos</a>
