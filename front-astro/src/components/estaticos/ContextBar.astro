@@ -1,9 +1,33 @@
 ---
-import estilos from '../ContextBar/ContextBar.module.css'
-// Mensaje constante: no necesita contexto de React ni hidratación.
+// Mensaje estático: en la versión React vivía en AppContext (mensajeSitio),
+// pero es un valor fijo de configuración, no dinámico, así que se traslada
+// directo aquí para que este bloque sea Astro estático (sin isla React).
 const mensajeSitio = 'Envío gratis en pedidos mayores a $999 MXN.'
 ---
-<div class={estilos.barra}>
-  <span class={estilos.punto}></span>
+<div class="barra">
+  <span class="punto"></span>
   {mensajeSitio}
 </div>
+
+<style>
+  .barra {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: var(--color-superficie);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio);
+    font-size: 14px;
+    color: var(--color-texto-tenue);
+    margin-bottom: 24px;
+  }
+
+  .punto {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--color-oro);
+    flex-shrink: 0;
+  }
+</style>

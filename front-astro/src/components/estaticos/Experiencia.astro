@@ -1,7 +1,5 @@
 ---
-import estilos from '../Experiencia/Experiencia.module.css'
-
-const razones = [
+const RAZONES = [
   {
     icono: '🎧',
     titulo: 'Equipo especializado',
@@ -19,21 +17,79 @@ const razones = [
   },
 ]
 ---
-<section class={estilos.seccion}>
-  <div class={estilos.encabezado}>
-    <span class={estilos.etiqueta}>EXPERIENCIA BETONOS</span>
-    <h2 class={estilos.titulo}>Más que comprar equipo</h2>
-    <p class={estilos.texto}>
+<section class="seccion">
+  <div class="encabezado">
+    <span class="etiqueta">EXPERIENCIA BETONOS</span>
+    <h2 class="titulo">Más que comprar equipo</h2>
+    <p class="texto">
       Una experiencia directa con la marca, pensada para ayudarte a elegir el equipo ideal
       para tu entrenamiento.
     </p>
   </div>
-  <div class={estilos.grid}>
-    {razones.map(razon => (
-      <div class={estilos.tarjeta}>
+
+  <div class="grid">
+    {RAZONES.map((razon) => (
+      <div class="tarjeta">
         <h3>{razon.icono} {razon.titulo}</h3>
         <p>{razon.texto}</p>
       </div>
     ))}
   </div>
 </section>
+
+<style>
+  .seccion {
+    margin: 28px 0;
+  }
+
+  .encabezado {
+    max-width: 520px;
+    margin-bottom: 20px;
+  }
+
+  .etiqueta {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: var(--color-oro);
+    font-weight: 600;
+  }
+
+  .titulo {
+    font-size: 32px;
+    margin-top: 8px;
+  }
+
+  .texto {
+    margin-top: 10px;
+    color: var(--color-texto-tenue);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+  }
+
+  .tarjeta {
+    background: var(--color-superficie);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio);
+    padding: 20px 18px;
+  }
+
+  .tarjeta h3 {
+    font-family: var(--fuente-texto);
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .tarjeta p {
+    font-size: 13px;
+    color: var(--color-texto-tenue);
+    margin: 0;
+    line-height: 1.5;
+  }
+</style>

@@ -116,5 +116,13 @@ export const typeDefs = `#graphql
     actualizarEstadoPedido(id: ID!, estado: EstadoPedido!): Pedido!
     confirmarPagoMercadoPago(pedidoId: ID!, paymentId: String!, monto: Float!, moneda: String!): Pedido!
     confirmarPagoStripe(pedidoId: ID!, sesionId: String!, montoCentavos: Int!, moneda: String!): Pedido!
+
+    "Entrega un token corto para conectarse al canal de notificaciones en vivo del admin."
+    crearTokenAdmin(email: String!): String!
+  }
+
+  type Subscription {
+    "Avisa al panel admin, en tiempo real, cuando un pedido se confirma como PAGADO."
+    pedidoConfirmado: Pedido!
   }
 `

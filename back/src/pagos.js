@@ -1,6 +1,7 @@
 // Agrega las operaciones de pago sin reemplazar src/resolvers.js.
 import { GraphQLError } from 'graphql'
 import { db } from './db.js'
+import { pubsub, CANAL_PEDIDO_CONFIRMADO } from './tiempoReal/pubsub.js'
 
 function accesoInterno(contexto) {
   if (!contexto?.autorizado) {
@@ -98,6 +99,8 @@ export function instalarPagos(resolvers) {
     if (!/^(?:\d+|[A-Z0-9][A-Z0-9_-]{9,99})$/.test(String(paymentId)) || moneda !== 'MXN' ||
         !Number.isFinite(monto)) throw new GraphQLError('Datos de pago inválidos.')
 
+    let esConfirmacionNueva = false
+
     const confirmar = db.transaction(() => {
       const pedido = db.prepare('SELECT * FROM pedidos WHERE id = ?').get(pedidoId)
       if (!pedido) throw new GraphQLError('Pedido no encontrado.')
@@ -126,13 +129,18 @@ export function instalarPagos(resolvers) {
       db.prepare(`INSERT INTO pagos_mercadopago
         (pedido_id, pago_id, confirmado_en) VALUES (?, ?, ?)`)
         .run(pedidoId, paymentId, new Date().toISOString())
+      esConfirmacionNueva = true
       return db.prepare('SELECT * FROM pedidos WHERE id = ?').get(pedidoId)
     })
     const fila = confirmar()
-    return {
+    const pedidoConfirmado = {
       id: fila.id, clienteNombre: fila.cliente_nombre,
       clienteEmail: fila.cliente_email, fecha: fila.fecha,
       estado: fila.estado, total: fila.total,
     }
+    // Solo se avisa en vivo cuando el pago se confirma por primera vez,
+    // no en reintentos del webhook sobre un pedido ya pagado.
+    if (esConfirmacionNueva) pubsub.publish(CANAL_PEDIDO_CONFIRMADO, { pedidoConfirmado })
+    return pedidoConfirmado
   }
 }

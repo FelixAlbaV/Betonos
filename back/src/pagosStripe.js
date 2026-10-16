@@ -1,5 +1,6 @@
 import { GraphQLError } from 'graphql'
 import { db } from './db.js'
+import { pubsub, CANAL_PEDIDO_CONFIRMADO } from './tiempoReal/pubsub.js'
 
 const mapearPedido = (p) => ({
   id: p.id,
@@ -30,6 +31,8 @@ export function instalarPagosStripe(resolvers) {
         moneda !== 'mxn') {
       throw new GraphQLError('Datos de Stripe inválidos.')
     }
+
+    let esConfirmacionNueva = false
 
     const confirmar = db.transaction(() => {
       const pedido = db.prepare('SELECT * FROM pedidos WHERE id = ?').get(pedidoId)
@@ -76,9 +79,14 @@ export function instalarPagosStripe(resolvers) {
         VALUES (?, ?, ?)
       `).run(pedidoId, sesionId, new Date().toISOString())
 
+      esConfirmacionNueva = true
       return mapearPedido(db.prepare('SELECT * FROM pedidos WHERE id = ?').get(pedidoId))
     })
 
-    return confirmar()
+    const pedidoConfirmado = confirmar()
+    // Solo se avisa en vivo cuando el pago se confirma por primera vez,
+    // no en reintentos del webhook sobre un pedido ya pagado.
+    if (esConfirmacionNueva) pubsub.publish(CANAL_PEDIDO_CONFIRMADO, { pedidoConfirmado })
+    return pedidoConfirmado
   }
 }
