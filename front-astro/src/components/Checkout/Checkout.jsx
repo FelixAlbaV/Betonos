@@ -1,141 +1,190 @@
-// src/components/Checkout/Checkout.jsx
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { loadStripe } from '@stripe/stripe-js'
+import { EmbeddedCheckout, EmbeddedCheckoutProvider } from '@stripe/react-stripe-js'
+import { CardPayment, initMercadoPago } from '@mercadopago/sdk-react'
 import { useCartStore } from '../../store/cartStore'
 import { useAppContext } from '../../context/AppContext'
-
 import estilos from './Checkout.module.css'
 
-export function Checkout({ onVolver, onPedidoConfirmado, user }) {
-  const items = useCartStore((estado) => estado.items)
-  const totalPrecio = useCartStore((estado) => estado.totalPrecio())
+const stripePublica = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY
+const mercadoPagoPublica = import.meta.env.PUBLIC_MP_PUBLIC_KEY
 
-  const { formatearPrecio } = useAppContext()
-
-  // Se prellenan con los datos de la cuenta de Google de la sesión, pero
-  // siguen siendo editables por si el pedido es para otra persona.
-  const [nombre, setNombre] = useState(user?.name ?? '')
-  const email = user?.email ?? ''
-  const [enviando, setEnviando] = useState(false)
-  const [error, setError] = useState(null)
-  const [metodoPago, setMetodoPago] = useState('mercadopago')
-
-
-async function manejarEnvio(evento) {
-  evento.preventDefault()
-
-  if (enviando || !items.length) return
-
-  setEnviando(true)
-  setError(null)
-
-  try {
-    const ruta = metodoPago === 'stripe' ? '/api/pagos/stripe/crear' : '/api/pagos/crear'
-    const respuesta = await fetch(ruta, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        nombre,
-        items: items.map(({ id, cantidad }) => ({
-          productoId: id,
-          cantidad,
-        })),
-      }),
-    })
-
-    const datos = await respuesta.json()
-
-    if (!respuesta.ok || !datos.url) {
-      throw new Error(
-        datos.error || 'No se pudo generar el pago.'
-      )
-    }
-
-    localStorage.setItem(
-      'betonos-ultimo-pedido',
-      String(datos.pedidoId)
-    )
-
-    window.location.assign(datos.url)
-
-  } catch (error) {
-    setError(error.message)
-    setEnviando(false)
-  }
+async function solicitar(ruta, cuerpo) {
+  const respuesta = await fetch(ruta, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(cuerpo),
+  })
+  const datos = await respuesta.json().catch(() => ({}))
+  if (!respuesta.ok) throw new Error(datos.error || 'No se pudo preparar el pago.')
+  return datos
 }
 
+function FormularioStripe({ clientSecret, pedidoId }) {
+  const [stripe, setStripe] = useState(null)
+  useEffect(() => {
+    if (stripePublica) setStripe(loadStripe(stripePublica))
+  }, [])
+  const opciones = useMemo(() => ({
+    clientSecret,
+    onComplete: () => window.location.assign(`/pago?pedido=${encodeURIComponent(pedidoId)}`),
+  }), [clientSecret, pedidoId])
+
+  if (!stripe) return <p>Cargando formulario seguro de Stripe…</p>
+  return (
+    <div className={estilos.pasarela}>
+      <EmbeddedCheckoutProvider stripe={stripe} options={opciones}>
+        <EmbeddedCheckout />
+      </EmbeddedCheckoutProvider>
+    </div>
+  )
+}
+
+function FormularioMercadoPago({ pedido, alRechazar, alError }) {
+  const [listo, setListo] = useState(false)
+  useEffect(() => {
+    if (mercadoPagoPublica) {
+      initMercadoPago(mercadoPagoPublica, { locale: 'es-MX' })
+      setListo(true)
+    }
+  }, [])
+
+  const procesar = async (datosTarjeta, datosAdicionales) => {
+    try {
+      const resultado = await solicitar('/api/pagos/procesar', {
+        pedidoId: pedido.pedidoId,
+        datosTarjeta,
+        // Orders exige tipo de tarjeta; el Brick lo entrega como paymentTypeId.
+        tipoPago: datosAdicionales?.paymentTypeId || datosTarjeta?.payment_type_id,
+      })
+      if (resultado.estado === 'rejected' || resultado.estado === 'cancelled') {
+        alRechazar('El pago fue rechazado. Revisa tu tarjeta e inicia un nuevo intento.')
+        return
+      }
+      // No declarar PAGADO hasta que el servidor confirme con Mercado Pago.
+      window.location.assign(`/pago?pedido=${encodeURIComponent(pedido.pedidoId)}`)
+    } catch (error) {
+      // Una caída de red no demuestra que el cargo haya fallado.
+      alError(`No se pudo verificar el resultado. Revisa el estado del pedido #${pedido.pedidoId} antes de intentar de nuevo.`)
+      throw error
+    }
+  }
+
+  if (!listo) return <p>Cargando formulario seguro de Mercado Pago…</p>
+  return (
+    <div className={estilos.pasarela}>
+      <CardPayment
+        initialization={{ amount: pedido.total }}
+        onSubmit={procesar}
+        onError={() => alError(`Revisa el formulario o consulta el pedido #${pedido.pedidoId} antes de volver a intentar el cobro.`)}
+      />
+    </div>
+  )
+}
+
+export function Checkout({ onVolver, user }) {
+  const items = useCartStore((estado) => estado.items)
+  const totalPrecio = useCartStore((estado) => estado.totalPrecio())
+  const { formatearPrecio } = useAppContext()
+  const [nombre, setNombre] = useState(user?.name ?? '')
+  const [metodo, setMetodo] = useState('stripe')
+  const [iniciando, setIniciando] = useState(false)
+  const [preparado, setPreparado] = useState(null)
+  const [error, setError] = useState('')
+
+  async function comenzar(evento) {
+    evento.preventDefault()
+    if (iniciando || preparado || !items.length || !user?.email) return
+    if (metodo === 'stripe' && !stripePublica) {
+      setError('Falta PUBLIC_STRIPE_PUBLISHABLE_KEY en front-astro/.env')
+      return
+    }
+    if (metodo === 'mercadopago' && !mercadoPagoPublica) {
+      setError('Falta PUBLIC_MP_PUBLIC_KEY en front-astro/.env')
+      return
+    }
+
+    setError('')
+    setIniciando(true)
+    try {
+      const ruta = metodo === 'stripe' ? '/api/pagos/stripe/crear' : '/api/pagos/crear'
+      const datos = await solicitar(ruta, {
+        nombre,
+        items: items.map(({ id, cantidad }) => ({ productoId: id, cantidad })),
+      })
+      if (!datos.pedidoId || (metodo === 'stripe' ? !datos.clientSecret : !Number.isFinite(datos.total))) {
+        throw new Error('Respuesta incompleta del servidor de pagos.')
+      }
+      localStorage.setItem('betonos-ultimo-pedido', String(datos.pedidoId))
+      setPreparado({ ...datos, metodo })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No fue posible iniciar el pago.')
+    } finally {
+      setIniciando(false)
+    }
+  }
+
+  if (!user?.email) return (
+    <section>
+      <h2 className={estilos.titulo}>Finalizar compra</h2>
+      <p>Inicia sesión para pagar tus artículos.</p>
+      <a href="/login">Iniciar sesión</a>
+    </section>
+  )
 
   return (
-    <section>
-      <button className={estilos.volver} onClick={onVolver}>
+    <section className={estilos.checkout}>
+      <button className={estilos.volver} type="button" onClick={onVolver}>
         ← Volver al carrito
       </button>
-      <h2 className={estilos.titulo}>Checkout</h2>
+      <h2 className={estilos.titulo}>Finalizar compra</h2>
 
-      <form className={estilos.formulario} onSubmit={manejarEnvio}>
+      <form className={estilos.formulario} onSubmit={comenzar}>
         <div className={estilos.campo}>
           <label htmlFor="nombre">Nombre completo</label>
-          <input
-            id="nombre"
-            type="text"
-            required
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            placeholder="Tu nombre"
-          />
+          <input id="nombre" value={nombre} required maxLength={120}
+            onChange={(e) => setNombre(e.target.value)} disabled={!!preparado || iniciando}/>
         </div>
-        <fieldset style={{ marginBottom: 16 }}>
-    <legend>Elige cómo pagar</legend>
-
-    <label>
-      <input
-        type="radio"
-        name="metodoPago"
-        value="mercadopago"
-        checked={metodoPago === 'mercadopago'}
-        onChange={() => setMetodoPago('mercadopago')}
-      />
-      Mercado Pago
-    </label>
-
-    <label style={{ marginLeft: 16 }}>
-      <input
-        type="radio"
-        name="metodoPago"
-        value="stripe"
-        checked={metodoPago === 'stripe'}
-        onChange={() => setMetodoPago('stripe')}
-      />
-      Stripe
-    </label>
-  </fieldset>
-
         <div className={estilos.campo}>
-          <label htmlFor="email">Correo electrónico</label>
-          <input
-            id="email"
-            type="email"
-            required
-            value={email}
-            readOnly
-            placeholder="tucorreo@ejemplo.com"
-          />
+          <label htmlFor="correo">Correo electrónico</label>
+          <input id="correo" type="email" value={user.email} readOnly />
         </div>
-
+        <fieldset className={estilos.metodos} disabled={!!preparado || iniciando}>
+          <legend>Elige cómo pagar</legend>
+          <label><input type="radio" name="metodo" checked={metodo === 'stripe'}
+            onChange={() => setMetodo('stripe')}/> Stripe</label>
+          <label><input type="radio" name="metodo" checked={metodo === 'mercadopago'}
+            onChange={() => setMetodo('mercadopago')}/> Mercado Pago</label>
+        </fieldset>
         <div className={estilos.resumen}>
           <span>{items.length} producto(s)</span>
           <strong>{formatearPrecio(totalPrecio)}</strong>
         </div>
-
-        {error && <p className={estilos.errorTexto}>No se pudo iniciar el pago: {error}</p>}
-
-        <button type="submit" disabled={enviando}>
-    {enviando
-      ? 'Abriendo pasarela…'
-      : `Pagar con ${metodoPago === 'stripe' ? 'Stripe' : 'Mercado Pago'}`}
-  </button>
+        {error && <p className={estilos.errorTexto} role="alert">{error}</p>}
+        {!preparado && (
+          <button type="submit" className={estilos.botonPagar}
+            disabled={iniciando || items.length === 0}>
+            {iniciando ? 'Preparando pago…' : `Continuar con ${metodo === 'stripe' ? 'Stripe' : 'Mercado Pago'}`}
+          </button>
+        )}
       </form>
+
+      {preparado && (
+        <div className={estilos.pagoIntegrado}>
+          <h3>Pago seguro con {preparado.metodo === 'stripe' ? 'Stripe' : 'Mercado Pago'}</h3>
+          <p className={estilos.aclaracion}>
+            Pedido #{preparado.pedidoId}. Los datos bancarios se capturan únicamente en el formulario oficial del proveedor.
+          </p>
+          {preparado.metodo === 'stripe' ? (
+            <FormularioStripe key={preparado.pedidoId} clientSecret={preparado.clientSecret}
+              pedidoId={preparado.pedidoId} />
+          ) : (
+            <FormularioMercadoPago key={preparado.pedidoId} pedido={preparado}
+              alError={setError}
+              alRechazar={(mensaje) => { setError(mensaje); setPreparado(null) }} />
+          )}
+        </div>
+      )}
     </section>
   )
 }

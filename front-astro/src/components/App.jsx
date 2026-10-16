@@ -1,3 +1,4 @@
+// BETONOS_HIDRATACION_SELECTIVA
 // src/components/App.jsx
 import { useEffect, useState } from 'react'
 import { AppProvider } from '../context/AppContext'
@@ -5,7 +6,6 @@ import { useFlujoCompra } from '../hooks/useFlujoCompra'
 import { gqlRequest, OBTENER_CATEGORIAS } from '../graphql/client'
 
 import { TopBar } from './TopBar/TopBar'
-import { Footer } from './Footer/Footer'
 import { Home } from './Home/Home'
 import { CategoriaDetalle } from './CategoriaDetalle/CategoriaDetalle'
 import { ProductoDetalle } from './ProductoDetalle/ProductoDetalle'
@@ -13,13 +13,18 @@ import { Carrito } from './Carrito/Carrito'
 import { Checkout } from './Checkout/Checkout'
 import { Confirmacion } from './Confirmacion/Confirmacion'
 import { Skeleton } from './Skeleton/Skeleton'
+import { useCartStore } from '../store/cartStore'
 
 import '../global.css'
 
-function AppInterna({ user }) {
+function AppInterna({ user, hero, contextBar, experiencia }) {
   const flujo = useFlujoCompra()
   const [categorias, setCategorias] = useState([])
   const [cargandoCategorias, setCargandoCategorias] = useState(true)
+  const vaciarCarrito = useCartStore((estado) => estado.vaciarCarrito)
+    useEffect(() => {
+      if (!user) vaciarCarrito()
+        }, [user, vaciarCarrito])
 
   // Las categorías se cargan una sola vez al montar la app (dependencia []),
   // y se comparten entre Home y el Sidebar sin volver a pedirlas.
@@ -44,7 +49,7 @@ function AppInterna({ user }) {
       </div>
 
       {!cargandoCategorias && flujo.vista === flujo.VISTAS.HOME && (
-        <Home categorias={categorias} onSeleccionarCategoria={flujo.irACategoria} />
+        <Home categorias={categorias} onSeleccionarCategoria={flujo.irACategoria} hero={hero} contextBar={contextBar} experiencia={experiencia} />
       )}
 
       {flujo.vista === flujo.VISTAS.CATEGORIA && (
@@ -60,7 +65,7 @@ function AppInterna({ user }) {
 
       {flujo.vista === flujo.VISTAS.CARRITO && (
         <div className="contenedor" style={{ paddingTop: 28 }}>
-          <Carrito onVolver={flujo.irAHome} onIrACheckout={flujo.irACheckout} />
+          <Carrito user={user} onVolver={flujo.irAHome} onIrACheckout={flujo.irACheckout} />
         </div>
       )}
 
@@ -79,18 +84,17 @@ function AppInterna({ user }) {
       {/* El modal de producto puede abrirse encima de Home o de CategoriaDetalle;
           por eso su condición es independiente de "vista". */}
       {flujo.productoId && (
-        <ProductoDetalle productoId={flujo.productoId} onCerrar={flujo.cerrarProducto} />
+        <ProductoDetalle productoId={flujo.productoId} onCerrar={flujo.cerrarProducto} user={user} />
       )}
 
-      <Footer />
     </div>
   )
 }
 
-export default function App({ user }) {
+export default function App({user,hero,'context-bar': contextBar,experiencia}) {
   return (
     <AppProvider>
-      <AppInterna user={user} />
+      <AppInterna user={user} hero={hero} contextBar={contextBar} experiencia={experiencia} />
     </AppProvider>
   )
 }

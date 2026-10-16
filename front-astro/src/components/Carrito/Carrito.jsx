@@ -4,7 +4,7 @@ import { useAppContext } from '../../context/AppContext'
 import { obtenerImagenProducto } from '../../utils/imagenesProductos'
 import estilos from './Carrito.module.css'
 
-export function Carrito({ onVolver, onIrACheckout }) {
+export function Carrito({ onVolver, onIrACheckout, user }) {
   const items = useCartStore((estado) => estado.items)
   const cambiarCantidad = useCartStore((estado) => estado.cambiarCantidad)
   const quitarItem = useCartStore((estado) => estado.quitarItem)
@@ -51,14 +51,20 @@ export function Carrito({ onVolver, onIrACheckout }) {
               </div>
             ))}
           </div>
-
           <div className={estilos.resumen}>
             <span className={estilos.total}>
               Total: <span className={estilos.totalNumero}>{formatearPrecio(totalPrecio)}</span>
-            </span>
-            <button className={estilos.botonCheckout} onClick={onIrACheckout}>
-              Ir a pagar
-            </button>
+              </span>
+              <button className={estilos.botonCheckout} onClick={() => {
+                if (!user) {
+                  window.location.assign('/login')
+                  return
+                 }
+                onIrACheckout()
+                  }}
+>
+  {user ? 'Ir a pagar' : 'Inicia sesión para pagar'}
+</button>
           </div>
         </>
       )}

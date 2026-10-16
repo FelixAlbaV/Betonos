@@ -1,10 +1,13 @@
 ---
 import { getSession } from 'auth-astro/server'
 import App from '../components/App.jsx'
+import HeroEstatico from '../components/estaticos/Hero.astro'
+import ContextBarEstatico from '../components/estaticos/ContextBar.astro'
+import ExperienciaEstatica from '../components/estaticos/Experiencia.astro'
+import FooterEstatico from '../components/estaticos/Footer.astro'
 import '../global.css'
 
 const session = await getSession(Astro.request)
-if (!session) return Astro.redirect('/login')
 ---
 
 <html lang="es">
@@ -21,6 +24,12 @@ if (!session) return Astro.redirect('/login')
     <title>Betonos — Audífonos</title>
   </head>
   <body>
-    <App client:load user={session.user} />
+    <App client:load user={session?.user ?? null}>
+      <HeroEstatico slot="hero" />
+      <ContextBarEstatico slot="context-bar" />
+      <ExperienciaEstatica slot="experiencia" />
+    </App>
+    <FooterEstatico />
+      <!-- BETONOS_HIDRATACION_SELECTIVA -->
   </body>
 </html>

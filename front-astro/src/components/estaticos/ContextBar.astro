@@ -1,0 +1,9 @@
+---
+import estilos from '../ContextBar/ContextBar.module.css'
+// Mensaje constante: no necesita contexto de React ni hidratación.
+const mensajeSitio = 'Envío gratis en pedidos mayores a $999 MXN.'
+---
+<div class={estilos.barra}>
+  <span class={estilos.punto}></span>
+  {mensajeSitio}
+</div>
