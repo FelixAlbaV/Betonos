@@ -20,3 +20,9 @@ export const CONSULTAR_PEDIDO = `
     pedido(id: $id) { id estado total clienteEmail }
   }
 `
+
+export const CREAR_TOKEN_ADMIN = `
+  mutation ($email: String!) {
+    crearTokenAdmin(email: $email)
+  }
+`

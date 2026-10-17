@@ -11,5 +11,12 @@ export default defineConfig({
     devFeatures: {
       edgeFunctions: false
     }
-  })
+  }),
+  vite: {
+    server: {
+      // Permite acceder al servidor de dev a través del túnel de Cloudflare
+      // (dominio distinto en cada sesión), solo en desarrollo local.
+      allowedHosts: true,
+    },
+  },
 })

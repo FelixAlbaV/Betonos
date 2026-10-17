@@ -1,6 +1,38 @@
 ---
+// src/pages/index.astro
+//
+// HIDRATACIÓN SELECTIVA POR ISLAS INDEPENDIENTES
+// ------------------------------------------------
+// Antes toda la página se hidrataba con un solo componente React
+// (<App client:load>), que cargaba y montaba TODO de golpe: barra
+// superior, catálogo, carrito, checkout, modal de producto... aunque el
+// usuario solo estuviera viendo el inicio.
+//
+// Ahora cada pieza vive en su propia carpeta dentro de src/islas/, y cada
+// una se monta por separado, con la directiva de hidratación que le
+// corresponde según qué tan urgente es que esté interactiva:
+//
+//   - client:load    -> se hidrata de inmediato (BarraSuperior: el usuario
+//                        puede querer abrir el carrito en cualquier momento).
+//   - client:visible -> se hidrata cuando entra en pantalla (Catalogo: no
+//                        es lo primero que se ve, el Hero estático sí lo es).
+//   - client:idle     -> se hidrata cuando el navegador ya no está ocupado
+//                        (las demás: solo se usan si el usuario navega a
+//                        ellas, así que no hay prisa).
+//
+// Las islas se comunican entre sí con un store compartido (navegacionStore,
+// en src/store), no con props de un padre común: por eso pueden vivir cada
+// una en su propio <script> de hidratación sin depender de las demás.
 import { getSession } from 'auth-astro/server'
-import App from '../components/App.jsx'
+
+import BarraSuperior from '../islas/BarraSuperior/BarraSuperior.jsx'
+import Catalogo from '../islas/Catalogo/Catalogo.jsx'
+import VistaCategoria from '../islas/VistaCategoria/VistaCategoria.jsx'
+import PanelCarrito from '../islas/PanelCarrito/PanelCarrito.jsx'
+import VistaCheckout from '../islas/VistaCheckout/VistaCheckout.jsx'
+import VistaConfirmacion from '../islas/VistaConfirmacion/VistaConfirmacion.jsx'
+import ModalProducto from '../islas/ModalProducto/ModalProducto.jsx'
+
 import HeroEstatico from '../components/estaticos/Hero.astro'
 import ContextBarEstatico from '../components/estaticos/ContextBar.astro'
 import ExperienciaEstatica from '../components/estaticos/Experiencia.astro'
@@ -8,6 +40,7 @@ import FooterEstatico from '../components/estaticos/Footer.astro'
 import '../global.css'
 
 const session = await getSession(Astro.request)
+const user = session?.user ?? null
 ---
 
 <html lang="es">
@@ -24,12 +57,27 @@ const session = await getSession(Astro.request)
     <title>Betonos — Audífonos</title>
   </head>
   <body>
-    <App client:load user={session?.user ?? null}>
+    <!-- Isla 1: siempre interactiva desde el primer momento. -->
+    <BarraSuperior client:load user={user} />
+
+    <!-- Isla 2: catálogo. Se hidrata cuando entra en pantalla; recibe los
+         bloques estáticos (Hero, ContextBar, Experiencia) como children,
+         que Astro ya renderizó en HTML plano, sin JavaScript. -->
+    <Catalogo client:visible>
       <HeroEstatico slot="hero" />
       <ContextBarEstatico slot="context-bar" />
       <ExperienciaEstatica slot="experiencia" />
-    </App>
+    </Catalogo>
+
+    <!-- Islas 3 a 7: vistas "bajo demanda". Hidratan en segundo plano
+         (client:idle) y no pintan nada hasta que el usuario navega a ellas. -->
+    <VistaCategoria client:idle />
+    <PanelCarrito client:idle user={user} />
+    <VistaCheckout client:idle user={user} />
+    <VistaConfirmacion client:idle />
+    <ModalProducto client:idle user={user} />
+
+    <!-- El Footer es HTML estático: no necesita ninguna isla. -->
     <FooterEstatico />
-      <!-- BETONOS_HIDRATACION_SELECTIVA -->
   </body>
 </html>

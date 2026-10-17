@@ -6,7 +6,8 @@
  * No modifica las rutas de Mercado Pago, Stripe o el CRUD existente.
  */
 import { getSession } from 'auth-astro/server'
-import { consultarBackend } from '../lib/betonosServer'
+import { consultarBackend, CREAR_TOKEN_ADMIN } from '../lib/betonosServer'
+import NotificacionesAdmin from '../islas/NotificacionesAdmin/NotificacionesAdmin.jsx'
 import '../styles/admin.css'
 
 const sesion = await getSession(Astro.request)
@@ -26,6 +27,19 @@ if (!permitidos.includes(correoActual)) {
 }
 
 Astro.response.headers.set('Cache-Control', 'private, no-store, max-age=0')
+
+// Token corto para el canal de notificaciones en vivo (ver src/islas/NotificacionesAdmin).
+// Se pide aquí, en el servidor, porque ya se validó arriba que este correo es admin.
+let tokenNotificaciones = ''
+try {
+  const datos = await consultarBackend(CREAR_TOKEN_ADMIN, { email: correoActual })
+  tokenNotificaciones = datos.crearTokenAdmin
+} catch (error) {
+  console.error('[Notificaciones admin]', error)
+}
+const wsUrlNotificaciones = (import.meta.env.PUBLIC_API_URL || 'http://localhost:4000/')
+  .replace('https://', 'wss://')
+  .replace('http://', 'ws://')
 
 type Categoria = { id: string; nombre: string; descripcion: string }
 type Producto = {
@@ -132,6 +146,7 @@ const maxCategoria = Math.max(1, ...resumenCategorias.map(c => c.existencias))
     <title>Panel administrativo · Betonos</title>
   </head>
   <body class="admin-body">
+    <NotificacionesAdmin client:idle token={tokenNotificaciones} wsUrl={wsUrlNotificaciones} />
     <div class="admin-layout">
       <aside class="admin-sidebar" aria-label="Navegación administrativa">
         <a class="admin-logo" href="/">BE<span>TONOS</span><small>ADMIN</small></a>

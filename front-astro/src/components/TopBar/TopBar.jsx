@@ -1,17 +1,33 @@
 // src/components/TopBar/TopBar.jsx
+//
+// Esta pieza es la isla "BarraSuperior" (ver src/islas/BarraSuperior).
+// Es independiente: ya no recibe funciones de navegación desde un padre
+// (onIrAHome, onIrACarrito), sino que llama directamente al store global
+// de navegación (navegacionStore). Así puede montarse sola con client:load
+// sin necesitar que exista ningún otro componente en la página.
 import { signOut } from 'auth-astro/client'
 import { useCartStore } from '../../store/cartStore'
+import { useNavegacionStore } from '../../store/navegacionStore'
 import estilos from './TopBar.module.css'
 import { useEffect, useState } from 'react'
 
-export function TopBar({ onIrAHome, onIrACarrito, user }) {
+export function TopBar({ user }) {
   // Selector de Zustand: el componente solo se re-renderiza cuando
   // cambia la cantidad total de artículos, no en cada cambio del store.
   const totalItems = useCartStore((estado) => estado.totalItems())
+  const irAHome = useNavegacionStore((estado) => estado.irAHome)
+  const irACarrito = useNavegacionStore((estado) => estado.irACarrito)
   const [montado, setMontado] = useState(false)
     useEffect(() => {
       setMontado(true)
     }, [])
+
+  // Si no hay sesión, el carrito guardado de una sesión anterior no debe
+  // seguir visible. Esta isla es la primera en montarse (client:load),
+  // así que es el lugar natural para esta limpieza.
+  useEffect(() => {
+    if (!user) useCartStore.getState().vaciarCarrito()
+  }, [user])
 
   const cerrarSesion = async () => {
     useCartStore.getState().vaciarCarrito()
@@ -20,7 +36,7 @@ export function TopBar({ onIrAHome, onIrACarrito, user }) {
   return (
     <header className={estilos.barra}>
       <h1 className={estilos.marca}>
-        <button onClick={onIrAHome} aria-label="Ir al inicio">
+        <button onClick={irAHome} aria-label="Ir al inicio">
           Be<span>tonos</span>
         </button>
       </h1>
@@ -48,7 +64,7 @@ export function TopBar({ onIrAHome, onIrACarrito, user }) {
 
       <button
         className={estilos.botonCarrito}
-        onClick={onIrACarrito}
+        onClick={irACarrito}
       >
         Carrito
         {montado && totalItems > 0 && (

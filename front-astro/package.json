@@ -22,6 +22,8 @@
     "@types/react-dom": "^19.3.0",
     "astro": "^7.3.5",
     "auth-astro": "^4.2.0",
+    "graphql": "^17.0.2",
+    "graphql-ws": "^6.4.1",
     "mercadopago": "^3.6.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
