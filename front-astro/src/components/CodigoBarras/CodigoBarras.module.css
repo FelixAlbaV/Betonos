@@ -1,0 +1,9 @@
+.codigoBarras {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  background: white;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 14px auto;
+}

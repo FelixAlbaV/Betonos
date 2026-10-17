@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from '@stripe/react-stripe-js'
 import { CardPayment, initMercadoPago } from '@mercadopago/sdk-react'
+import { CodigoBarras } from '../CodigoBarras/CodigoBarras'
 import { useCartStore } from '../../store/cartStore'
+import { useOxxoStore } from '../../store/oxxoStore'
 import { useAppContext } from '../../context/AppContext'
 import estilos from './Checkout.module.css'
 
@@ -36,6 +38,57 @@ function FormularioStripe({ clientSecret, pedidoId }) {
       <EmbeddedCheckoutProvider stripe={stripe} options={opciones}>
         <EmbeddedCheckout />
       </EmbeddedCheckoutProvider>
+    </div>
+  )
+}
+
+function FormularioOxxo({ pedido, alError }) {
+  const [generando, setGenerando] = useState(false)
+  const [ficha, setFicha] = useState(null)
+  const guardarFicha = useOxxoStore((estado) => estado.guardarFicha)
+  const obtenerFicha = useOxxoStore((estado) => estado.obtenerFicha)
+
+  // Si ya se generó la ficha antes (en esta misma sesión del navegador),
+  // se muestra la guardada en vez de volver a pedirle una a Mercado Pago.
+  useEffect(() => {
+    const guardada = obtenerFicha(pedido.pedidoId)
+    if (guardada) setFicha(guardada)
+  }, [pedido.pedidoId])
+
+  async function generarFicha() {
+    setGenerando(true)
+    try {
+      const datos = await solicitar('/api/pagos/oxxo', { pedidoId: pedido.pedidoId })
+      setFicha(datos)
+      guardarFicha(pedido.pedidoId, datos)
+    } catch (error) {
+      alError(error instanceof Error ? error.message : 'No se pudo generar la ficha de OXXO.')
+    } finally {
+      setGenerando(false)
+    }
+  }
+
+  if (!ficha) {
+    return (
+      <div className={estilos.pasarela}>
+        <p>Vas a pagar en efectivo, en cualquier tienda OXXO. Primero genera tu ficha:</p>
+        <button type="button" className={estilos.botonPagar} onClick={generarFicha} disabled={generando}>
+          {generando ? 'Generando ficha…' : 'Generar ficha de pago OXXO'}
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className={estilos.pasarela}>
+      <p>Tu ficha ya está lista. Preséntala (en tu celular o impresa) en cualquier OXXO.</p>
+      {ficha.referencia && <p>Referencia: <strong>{ficha.referencia}</strong></p>}
+      {ficha.codigoBarras && <CodigoBarras valor={ficha.codigoBarras} />}
+      <p className={estilos.aclaracion}>
+        El pedido se marca como pagado automáticamente en cuanto Mercado Pago nos confirme el pago
+        (puede tardar unos minutos después de pagar en tienda). Puedes revisar el estado en{' '}
+        <a href={`/pago?pedido=${encodeURIComponent(pedido.pedidoId)}`}>esta página</a>.
+      </p>
     </div>
   )
 }
@@ -107,6 +160,8 @@ export function Checkout({ onVolver, user }) {
     setError('')
     setIniciando(true)
     try {
+      // OXXO usa el mismo endpoint que Mercado Pago con tarjeta: ambos solo
+      // necesitan registrar el pedido. La diferencia está en cómo se cobra.
       const ruta = metodo === 'stripe' ? '/api/pagos/stripe/crear' : '/api/pagos/crear'
       const datos = await solicitar(ruta, {
         nombre,
@@ -154,7 +209,9 @@ export function Checkout({ onVolver, user }) {
           <label><input type="radio" name="metodo" checked={metodo === 'stripe'}
             onChange={() => setMetodo('stripe')}/> Stripe</label>
           <label><input type="radio" name="metodo" checked={metodo === 'mercadopago'}
-            onChange={() => setMetodo('mercadopago')}/> Mercado Pago</label>
+            onChange={() => setMetodo('mercadopago')}/> Mercado Pago </label>
+          <label><input type="radio" name="metodo" checked={metodo === 'oxxo'}
+            onChange={() => setMetodo('oxxo')}/> OXXO Pay (Pago en sucursal Oxxo)</label>
         </fieldset>
         <div className={estilos.resumen}>
           <span>{items.length} producto(s)</span>
@@ -164,20 +221,26 @@ export function Checkout({ onVolver, user }) {
         {!preparado && (
           <button type="submit" className={estilos.botonPagar}
             disabled={iniciando || items.length === 0}>
-            {iniciando ? 'Preparando pago…' : `Continuar con ${metodo === 'stripe' ? 'Stripe' : 'Mercado Pago'}`}
+            {iniciando ? 'Preparando pago…' : `Continuar con ${
+              metodo === 'stripe' ? 'Stripe' : metodo === 'mercadopago' ? 'Mercado Pago' : 'OXXO Pay'
+            }`}
           </button>
         )}
       </form>
 
       {preparado && (
         <div className={estilos.pagoIntegrado}>
-          <h3>Pago seguro con {preparado.metodo === 'stripe' ? 'Stripe' : 'Mercado Pago'}</h3>
+          <h3>Pago seguro con {
+            preparado.metodo === 'stripe' ? 'Stripe' : preparado.metodo === 'mercadopago' ? 'Mercado Pago' : 'OXXO Pay'
+          }</h3>
           <p className={estilos.aclaracion}>
             Pedido #{preparado.pedidoId}. Los datos bancarios se capturan únicamente en el formulario oficial del proveedor.
           </p>
           {preparado.metodo === 'stripe' ? (
             <FormularioStripe key={preparado.pedidoId} clientSecret={preparado.clientSecret}
               pedidoId={preparado.pedidoId} />
+          ) : preparado.metodo === 'oxxo' ? (
+            <FormularioOxxo key={preparado.pedidoId} pedido={preparado} alError={setError} />
           ) : (
             <FormularioMercadoPago key={preparado.pedidoId} pedido={preparado}
               alError={setError}

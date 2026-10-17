@@ -1,6 +1,7 @@
 ---
 import { getSession } from 'auth-astro/server'
 import { consultarBackend } from '../lib/betonosServer'
+import VerFichaOxxo from '../islas/VerFichaOxxo/VerFichaOxxo.jsx'
 import '../styles/mi-cuenta.css'
 
 export const prerender = false
@@ -218,6 +219,12 @@ const nombresRuta = ['Sin iniciar', 'Preparando', 'En camino', 'Entregado']
                         <p class="cuenta-espera">{pedido.estado === 'PENDIENTE'
                           ? 'El pago todavía no está confirmado. Si acabas de pagar, actualiza más tarde.'
                           : 'El pedido fue cancelado; no tiene un envío activo.'}</p>
+                      )}
+                      {/* client:load y no client:visible: la isla queda sin
+                          tamaño propio dentro de la tarjeta y el navegador
+                          nunca la detecta como "visible" para hidratarla. */}
+                      {pedido.estado === 'PENDIENTE' && (
+                        <VerFichaOxxo client:load pedidoId={pedido.id} />
                       )}
 
                       <details class="cuenta-detalle">
