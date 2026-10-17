@@ -1,22 +1,23 @@
 /* src/global.css
-   Identidad visual: marca de audio — negro carbón, rojo de acento,
-   dorado premium. Tipografía condensada para títulos (Bebas Neue) +
-   Work Sans para texto de lectura.
+   Identidad visual según el Manual de Identidad Digital de Betonos:
+   negro #0D0D0D, gris oscuro #1A1A1A, gris medio #3D3D3D, blanco suave
+   #F5F5F5 y dorado #C9A84C como único color de acento (logo, botones).
 */
 
 :root {
-  --color-fondo: #15110f;
-  --color-superficie: #1e1815;
-  --color-superficie-alta: #26201c;
-  --color-borde: #3a322c;
-  --color-texto: #f3ede4;
-  --color-texto-tenue: #a89c8e;
-  --color-acento: #e2432a;
-  --color-acento-hover: #f0553b;
-  --color-oro: #e8b930;
+  --color-fondo: #0d0d0d;
+  --color-superficie: #1a1a1a;
+  --color-superficie-alta: #242424;
+  --color-borde: #3d3d3d;
+  --color-texto: #f5f5f5;
+  --color-texto-tenue: #9a9a9a;
+  --color-acento: #c9a84c;
+  --color-acento-hover: #dcc06a;
+  --color-oro: #c9a84c;
 
-  --fuente-display: "Bebas Neue", "Arial Narrow", sans-serif;
-  --fuente-texto: "Work Sans", system-ui, sans-serif;
+  --fuente-display: "Raleway", "Arial Narrow", sans-serif;
+  --fuente-texto: "Inter", system-ui, sans-serif;
+  --fuente-mono: "JetBrains Mono", "Courier New", monospace;
 
   --radio: 3px;
   --sombra: 0 8px 24px rgba(0, 0, 0, 0.35);
@@ -44,9 +45,10 @@ h1,
 h2,
 h3 {
   font-family: var(--fuente-display);
-  letter-spacing: 0.02em;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   margin: 0;
-  line-height: 1;
+  line-height: 1.1;
 }
 
 button {

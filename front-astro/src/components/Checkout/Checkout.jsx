@@ -82,7 +82,7 @@ function FormularioOxxo({ pedido, alError }) {
   return (
     <div className={estilos.pasarela}>
       <p>Tu ficha ya está lista. Preséntala (en tu celular o impresa) en cualquier OXXO.</p>
-      {ficha.referencia && <p>Referencia: <strong>{ficha.referencia}</strong></p>}
+      {ficha.referencia && <p>Referencia: <strong style={{ fontFamily: "'JetBrains Mono', monospace" }}>{ficha.referencia}</strong></p>}
       {ficha.codigoBarras && <CodigoBarras valor={ficha.codigoBarras} />}
       <p className={estilos.aclaracion}>
         El pedido se marca como pagado automáticamente en cuanto Mercado Pago nos confirme el pago

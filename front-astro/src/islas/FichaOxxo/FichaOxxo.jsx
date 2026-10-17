@@ -14,7 +14,7 @@ export default function FichaOxxo({ pedidoId }) {
 
   return (
     <div>
-      <p>Referencia: <strong>{ficha.referencia}</strong></p>
+      <p>Referencia: <strong style={{ fontFamily: "'JetBrains Mono', monospace" }}>{ficha.referencia}</strong></p>
       {ficha.codigoBarras && <CodigoBarras valor={ficha.codigoBarras} />}
     </div>
   )

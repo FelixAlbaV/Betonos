@@ -37,6 +37,7 @@ export function TopBar({ user }) {
     <header className={estilos.barra}>
       <h1 className={estilos.marca}>
         <button onClick={irAHome} aria-label="Ir al inicio">
+          <img src="/betonos-logo.png" alt="" className={estilos.logo} />
           Be<span>tonos</span>
         </button>
       </h1>

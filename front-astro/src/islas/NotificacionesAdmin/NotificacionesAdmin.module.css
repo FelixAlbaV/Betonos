@@ -9,9 +9,9 @@
 }
 
 .aviso {
-  background: var(--color-superficie-alta, #1c1c1c);
-  border: 1px solid var(--color-acento, #e03b26);
-  color: var(--color-texto, #fff);
+  background: var(--color-superficie-alta, #242424);
+  border: 1px solid var(--color-acento, #c9a84c);
+  color: var(--color-texto, #f5f5f5);
   padding: 12px 16px;
   border-radius: var(--radio, 10px);
   font-size: 14px;
