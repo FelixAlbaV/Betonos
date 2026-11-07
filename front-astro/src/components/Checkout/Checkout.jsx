@@ -104,21 +104,20 @@ function FormularioMercadoPago({ pedido, alRechazar, alError }) {
 
   const procesar = async (datosTarjeta, datosAdicionales) => {
     try {
-      const resultado = await solicitar('/api/pagos/procesar', {
+      // El backend solo responde 200 cuando MP acreditó el pago de verdad.
+      // Cualquier otro resultado (rechazado O pendiente — con tarjeta "pendiente"
+      // no es válido, a diferencia de OXXO) llega aquí como error, con el
+      // mensaje exacto del motivo (tarjeta vencida, fondos insuficientes, etc.).
+      await solicitar('/api/pagos/procesar', {
         pedidoId: pedido.pedidoId,
         datosTarjeta,
         // Orders exige tipo de tarjeta; el Brick lo entrega como paymentTypeId.
         tipoPago: datosAdicionales?.paymentTypeId || datosTarjeta?.payment_type_id,
       })
-      if (resultado.estado === 'rejected' || resultado.estado === 'cancelled') {
-        alRechazar('El pago fue rechazado. Revisa tu tarjeta e inicia un nuevo intento.')
-        return
-      }
-      // No declarar PAGADO hasta que el servidor confirme con Mercado Pago.
+      // Solo se llega aquí si MP acreditó el pago.
       window.location.assign(`/pago?pedido=${encodeURIComponent(pedido.pedidoId)}`)
     } catch (error) {
-      // Una caída de red no demuestra que el cargo haya fallado.
-      alError(`No se pudo verificar el resultado. Revisa el estado del pedido #${pedido.pedidoId} antes de intentar de nuevo.`)
+      alRechazar(error.message || 'El pago no fue aprobado. Revisa tu tarjeta e inicia un nuevo intento.')
       throw error
     }
   }

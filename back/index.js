@@ -2,6 +2,7 @@
 import { instalarPanelUsuario } from './src/miCuenta.js'
 import { instalarAdminCrud } from './src/adminCrud.js'
 import { instalarNotificaciones } from './src/tiempoReal/notificaciones.js'
+import { instalarProductosEnVivo } from './src/tiempoReal/productosEnVivo.js'
 import { verificarTokenAdmin } from './src/tiempoReal/tokenAdmin.js'
 import { ApolloServer } from '@apollo/server'
 import { expressMiddleware } from '@apollo/server/express4'
@@ -41,6 +42,7 @@ instalarPagosStripe(resolvers)
 instalarAdminCrud(resolvers)
 instalarPanelUsuario(resolvers)
 instalarNotificaciones(resolvers)
+instalarProductosEnVivo(resolvers)
 
 const schema = makeExecutableSchema({ typeDefs, resolvers })
 
@@ -58,8 +60,13 @@ const app = express()
 const httpServer = http.createServer(app)
 
 // Subscriptions viven en el mismo puerto, sobre WebSocket. El context de la
-// conexión se construye UNA vez al conectar (no por cada evento): verifica el
-// token corto del panel admin y guarda el correo en contexto.adminEmail.
+// conexión se construye UNA vez al conectar (no por cada evento).
+// Hay dos tipos de canal: uno PRIVADO (avisos de pago, solo admin) y uno
+// PÚBLICO (cambios de producto/stock, cualquier cliente de la tienda).
+// Por eso el token aquí es OPCIONAL: si llega, se revisa y se guarda el
+// correo en contexto.adminEmail; si no llega, la conexión igual se acepta,
+// pero solo podrá escuchar canales públicos — "pedidoConfirmado" exige
+// contexto.adminEmail dentro de su propio resolver (ver notificaciones.js).
 // Sin "path" fijo: igual que las queries HTTP, acepta cualquier ruta
 // (PUBLIC_API_URL puede terminar en "/" o en "/graphql" según el entorno).
 const wsServer = new WebSocketServer({ server: httpServer })
@@ -67,7 +74,7 @@ const limpiezaWs = useServer({
   schema,
   context: async (ctx) => {
     const token = ctx.connectionParams?.token
-    if (!token) throw new Error('Sin token: no puedes conectarte.')
+    if (!token) return {}
     const adminEmail = verificarTokenAdmin(token)
     return { adminEmail }
   },

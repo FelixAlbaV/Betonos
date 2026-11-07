@@ -5,6 +5,9 @@
 
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:4000/graphql'
 
+// Misma URL del backend, pero en su versión WebSocket (para Subscriptions).
+export const WS_URL = API_URL.replace('https://', 'wss://').replace('http://', 'ws://')
+
 export async function gqlRequest(query, variables = {}) {
   const respuesta = await fetch(API_URL, {
     method: 'POST',
@@ -58,6 +61,22 @@ export const OBTENER_PRODUCTO = `
         id
         nombre
       }
+    }
+  }
+`
+
+// ---------- Subscriptions ----------
+// Pública: cualquier cliente viendo la tienda puede escuchar cuándo el admin
+// cambia un producto (stock, precio, etc.), sin recargar la página.
+
+export const PRODUCTO_ACTUALIZADO_SUBSCRIPCION = `
+  subscription {
+    productoActualizado {
+      id
+      nombre
+      precio
+      stock
+      imagen
     }
   }
 `

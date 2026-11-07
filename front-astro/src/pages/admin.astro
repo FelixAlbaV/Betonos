@@ -103,7 +103,7 @@ try {
   fallo = true
 }
 
-const pagados = pedidos.filter(p => p.estado === 'PAGADO' || p.estado === 'ENVIADO')
+const pagados = pedidos.filter(p => p.estado === 'PAGADO')
 const pendientes = pedidos.filter(p => p.estado === 'PENDIENTE')
 const totalStock = productos.reduce((suma, p) => suma + p.stock, 0)
 const stockBajo = productos.filter(p => p.stock > 0 && p.stock <= 5).length
@@ -118,9 +118,9 @@ const numero = (n: number) => new Intl.NumberFormat('es-MX').format(n)
 const fecha = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s)
   ? s.split('-').reverse().join('/') : s
 const estadoTexto: Record<string, string> = {
-  PENDIENTE: 'Pendiente', PAGADO: 'Pagado', ENVIADO: 'Enviado', CANCELADO: 'Cancelado'
+  PENDIENTE: 'Pendiente', PAGADO: 'Pagado'
 }
-const estados = ['PAGADO', 'ENVIADO', 'PENDIENTE', 'CANCELADO']
+const estados = ['PAGADO', 'PENDIENTE']
 const conteos = Object.fromEntries(estados.map(estado => [
   estado, pedidos.filter(p => p.estado === estado).length
 ]))
@@ -214,7 +214,7 @@ const maxCategoria = Math.max(1, ...resumenCategorias.map(c => c.existencias))
                 <span class="admin-eyebrow">OPERACIONES</span>
                 <h2>Ventas confirmadas</h2>
                 <strong>{precio(ingresos)}</strong>
-                <p>Importe de los pedidos con estado Pagado o Enviado.</p>
+                <p>Importe de los pedidos con estado Pagado.</p>
                 <div class="admin-revenue-info">
                   <div><b>{numero(pagados.length)}</b><span>Compras confirmadas</span></div>
                   <div><b>{numero(pendientes.length)}</b><span>Compras pendientes</span></div>

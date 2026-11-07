@@ -6,3 +6,7 @@ import { PubSub } from 'graphql-subscriptions'
 export const pubsub = new PubSub()
 
 export const CANAL_PEDIDO_CONFIRMADO = 'PEDIDO_CONFIRMADO'
+
+// Público (no necesita token de admin): cualquier cliente viendo la tienda
+// puede escuchar cuándo cambia un producto (p. ej. su stock).
+export const CANAL_PRODUCTO_ACTUALIZADO = 'PRODUCTO_ACTUALIZADO'

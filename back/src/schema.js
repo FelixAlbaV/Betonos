@@ -117,6 +117,9 @@ export const typeDefs = `#graphql
     confirmarPagoMercadoPago(pedidoId: ID!, paymentId: String!, monto: Float!, moneda: String!): Pedido!
     confirmarPagoStripe(pedidoId: ID!, sesionId: String!, montoCentavos: Int!, moneda: String!): Pedido!
 
+    "Mutation de negocio: borra un pedido que nunca llegó a pagarse (solo si sigue PENDIENTE). No toca stock porque nunca se descontó."
+    eliminarPedidoPendiente(id: ID!): Boolean!
+
     "Entrega un token corto para conectarse al canal de notificaciones en vivo del admin."
     crearTokenAdmin(email: String!): String!
   }
@@ -124,5 +127,8 @@ export const typeDefs = `#graphql
   type Subscription {
     "Avisa al panel admin, en tiempo real, cuando un pedido se confirma como PAGADO."
     pedidoConfirmado: Pedido!
+
+    "Avisa a cualquier cliente viendo la tienda, en tiempo real, cuando un producto cambia (p. ej. su stock o precio). Pública: no requiere ser admin."
+    productoActualizado: Producto!
   }
 `

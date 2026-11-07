@@ -143,4 +143,23 @@ export function instalarPagos(resolvers) {
     if (esConfirmacionNueva) pubsub.publish(CANAL_PEDIDO_CONFIRMADO, { pedidoConfirmado })
     return pedidoConfirmado
   }
+
+  // Se usa cuando un pago con tarjeta (Stripe o MP) es rechazado o queda en un
+  // estado no válido: el pedido nunca llegó a pagarse, así que no debe quedar
+  // guardado. Es seguro porque registrarPedido nunca descuenta stock -- eso
+  // solo pasa al confirmar el pago (arriba). Nunca borra un pedido ya PAGADO.
+  resolvers.Mutation.eliminarPedidoPendiente = (_p, { id }, contexto) => {
+    accesoInterno(contexto)
+    const eliminar = db.transaction(() => {
+      const pedido = db.prepare('SELECT estado FROM pedidos WHERE id = ?').get(id)
+      if (!pedido) return false
+      if (pedido.estado !== 'PENDIENTE') {
+        throw new GraphQLError('Solo se puede borrar un pedido que sigue pendiente.')
+      }
+      db.prepare('DELETE FROM pedido_items WHERE pedido_id = ?').run(id)
+      db.prepare('DELETE FROM pedidos WHERE id = ?').run(id)
+      return true
+    })
+    return eliminar()
+  }
 }

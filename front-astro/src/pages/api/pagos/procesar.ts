@@ -3,6 +3,18 @@ import { getSession } from 'auth-astro/server'
 import { createHmac } from 'node:crypto'
 import { consultarBackend, CONSULTAR_PEDIDO } from '../../../lib/betonosServer'
 
+// Con tarjeta no hay "pendiente" válido: si MP no acredita el pago, el pedido
+// nunca llegó a pagarse y no debe quedar guardado (nunca se le descontó stock).
+async function eliminarPedidoFallido(pedidoId: string) {
+  try {
+    await consultarBackend(`
+      mutation ($id: ID!) { eliminarPedidoPendiente(id: $id) }
+    `, { id: pedidoId })
+  } catch (error) {
+    console.error('[MP Orders: no se pudo borrar el pedido fallido]', error)
+  }
+}
+
 // Checkout API via Orders, NO Payments.create() (/v1/payments).
 // El CardPayment Brick tokeniza los datos; este endpoint NUNCA recibe PAN ni CVV.
 const VALID_ORDER_ID = /^[A-Z0-9][A-Z0-9_-]{9,99}$/
@@ -16,6 +28,40 @@ async function obtenerOrder(id: string, token: string) {
   })
   if (!r.ok) throw new Error(`No se pudo verificar la order en Mercado Pago (${r.status}).`)
   return r.json()
+}
+
+// Mensajes para los "status_detail" que manda Mercado Pago, tanto en tarjetas
+// reales rechazadas como en las tarjetas de prueba (APRO, OTHE, CONT, etc.).
+// La API de Orders los manda SIN el prefijo "cc_rejected_" que usa la API vieja
+// de Payments (p. ej. "bad_filled_card_data" en vez de "cc_rejected_bad_filled_card_number"),
+// así que las claves de este mapa van normalizadas sin ese prefijo.
+// Doc de nombres de prueba: https://www.mercadopago.com.mx/developers/es/docs/checkout-api/integration-test/test-cards
+const MENSAJES_STATUS_DETAIL: Record<string, string> = {
+  accredited: 'Pago aprobado.',
+  other_reason: 'Rechazado por un error general del banco. Intenta de nuevo o usa otra tarjeta.',
+  pending_contingency: 'El pago quedó pendiente de revisión del banco. Con tarjeta esto no es válido: no se confirmará el pedido, intenta de nuevo o usa otra tarjeta.',
+  pending_review_manual: 'El pago quedó pendiente de revisión manual. Con tarjeta esto no es válido: no se confirmará el pedido, intenta de nuevo o usa otra tarjeta.',
+  call_for_authorize: 'Rechazado: debes autorizar este pago directamente con tu banco antes de reintentar.',
+  insufficient_amount: 'Rechazado por fondos insuficientes en la tarjeta.',
+  bad_filled_security_code: 'Rechazado: el código de seguridad (CVV) es inválido.',
+  bad_filled_date: 'Rechazado: la fecha de vencimiento es inválida o la tarjeta ya venció.',
+  bad_filled_other: 'Rechazado: hay un error en los datos del formulario de la tarjeta.',
+  bad_filled_card_number: 'Rechazado: el número de tarjeta es inválido.',
+  bad_filled_card_data: 'Rechazado: faltan datos de la tarjeta o están mal capturados (número, fecha o CVV).',
+  invalid_installments: 'Rechazado: el número de cuotas elegido no es válido para esta tarjeta.',
+  duplicated_payment: 'Rechazado: ya se registró un pago idéntico hace unos instantes. Revisa el pedido antes de volver a pagar.',
+  card_disabled: 'Rechazado: la tarjeta está deshabilitada. Debes activarla llamando a tu banco.',
+  card_type_not_allowed: 'Rechazado: este tipo de tarjeta no está permitido para esta compra.',
+  max_attempts: 'Rechazado: se superó el número de intentos permitidos con el PIN de la tarjeta.',
+  blacklist: 'Rechazado: el banco marcó esta tarjeta como no segura.',
+  unsupported: 'Este medio de pago no es compatible con la operación solicitada.',
+  failed: 'Rechazado por un error general al procesar la tarjeta. Intenta de nuevo o usa otra tarjeta.',
+}
+
+function mensajeParaStatusDetail(detalle: string | undefined) {
+  if (!detalle) return 'El pago no fue aprobado. Intenta de nuevo o usa otra tarjeta.'
+  const normalizado = detalle.replace(/^cc_rejected_/, '')
+  return MENSAJES_STATUS_DETAIL[normalizado] || `El pago no fue aprobado (motivo: ${detalle}). Intenta de nuevo o usa otra tarjeta.`
 }
 
 // No usamos la respuesta del navegador para declarar una venta pagada.
@@ -94,10 +140,17 @@ export const POST: APIRoute = async ({ request }) => {
     })
     const respuesta = await r.json().catch(() => ({}))
     if (!r.ok) {
-      // No registrar datos de la tarjeta ni secretos en consola. Si hay duda, no reintentar.
-      const codigos = (respuesta.errors || respuesta.cause || []).map?.((e: any) => e.code)?.join(', ') || ''
-      console.error('[MP Orders create]', { status: r.status, error: respuesta.error, code: codigos })
-      return Response.json({ error: `Mercado Pago rechazó la solicitud (HTTP ${r.status}${codigos ? ', ' + codigos : ''}). Revisa la terminal.` }, { status: 502 })
+      // Cuando MP rechaza la order en la misma respuesta de creación (sin
+      // llegar a existir de forma consultable), el motivo real no está en
+      // "errors[].code" (siempre dice "failed", genérico) sino adentro de
+      // "data.transactions.payments[0].status_detail".
+      const statusDetailCreacion = respuesta?.data?.transactions?.payments?.[0]?.status_detail
+      console.error('[MP Orders create] rechazada al crear', { status: r.status, statusDetail: statusDetailCreacion })
+      await eliminarPedidoFallido(id)
+      return Response.json({
+        error: mensajeParaStatusDetail(statusDetailCreacion),
+        statusDetail: statusDetailCreacion,
+      }, { status: 402 })
     }
 
     const idOrder = String(respuesta.id || '')
@@ -109,6 +162,9 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Segunda consulta a MP: solo confirmamos pagos acreditados y verificados en servidor.
     const order = await obtenerOrder(idOrder, token)
+    const pagoIntento = order?.transactions?.payments?.[0]
+    const statusDetail = pagoIntento?.status_detail || order.status_detail
+
     if (acreditada(order, id, pedido.total)) {
       try {
         await consultarBackend(`
@@ -120,8 +176,21 @@ export const POST: APIRoute = async ({ request }) => {
       } catch (error) {
         console.error('[MP order acreditada: revisión de pedido requerida]', error)
       }
+      return Response.json({ pedidoId: id, estado: order.status, orderId: idOrder })
     }
-    return Response.json({ pedidoId: id, estado: order.status, orderId: idOrder })
+
+    // Con tarjeta, "pending" NO es un estado válido (a diferencia de OXXO):
+    // el banco responde al instante, así que aquí se trata igual que un rechazo,
+    // con el mensaje que explica el motivo real. El pedido se queda PENDIENTE
+    // en nuestra base (nunca se confirma), para que el cliente pueda reintentar.
+    console.error('[MP Orders: pago no acreditado]', { status: order.status, statusDetail })
+    await eliminarPedidoFallido(id)
+    return Response.json({
+      error: mensajeParaStatusDetail(statusDetail),
+      estado: order.status,
+      statusDetail,
+      orderId: idOrder,
+    }, { status: 402 })
   } catch (error) {
     console.error('[MP Orders: error durante procesamiento]', error instanceof Error ? error.message : error)
     return Response.json({ error: 'No se pudo verificar el resultado del pago. Consulta el estado antes de reintentar.' }, { status: 502 })

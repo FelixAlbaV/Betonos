@@ -1,6 +1,7 @@
 // src/components/CategoriaDetalle/CategoriaDetalle.jsx
 import { useEffect, useState } from 'react'
-import { gqlRequest, OBTENER_PRODUCTOS_POR_CATEGORIA } from '../../graphql/client'
+import { createClient } from 'graphql-ws'
+import { gqlRequest, OBTENER_PRODUCTOS_POR_CATEGORIA, PRODUCTO_ACTUALIZADO_SUBSCRIPCION, WS_URL } from '../../graphql/client'
 import { ProductoCard } from '../ProductoCard/ProductoCard'
 import { SkeletonTarjetaProducto } from '../Skeleton/Skeleton'
 import estilos from './CategoriaDetalle.module.css'
@@ -33,6 +34,30 @@ export function CategoriaDetalle({ categoriaId, categoriaNombre, onVolver, onAbr
       cancelado = true
     }
   }, [categoriaId])
+
+  // Canal en vivo (público, sin login): si el admin cambia un producto que
+  // ya está en pantalla (precio, stock, etc.), se actualiza solo, al
+  // instante, sin que el cliente tenga que recargar la página.
+  useEffect(() => {
+    const client = createClient({ url: WS_URL })
+
+    const cerrar = client.subscribe(
+      { query: PRODUCTO_ACTUALIZADO_SUBSCRIPCION },
+      {
+        next: ({ data }) => {
+          const actualizado = data?.productoActualizado
+          if (!actualizado) return
+          setProductos((lista) =>
+            lista.map((p) => (p.id === actualizado.id ? { ...p, ...actualizado } : p))
+          )
+        },
+        error: (err) => console.error('[Productos en vivo]', err),
+        complete: () => {},
+      }
+    )
+
+    return () => cerrar()
+  }, [])
 
   return (
     <section>
