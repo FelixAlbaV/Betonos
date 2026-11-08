@@ -60,10 +60,14 @@ const user = session?.user ?? null
     <!-- Isla 1: siempre interactiva desde el primer momento. -->
     <BarraSuperior client:load user={user} />
 
-    <!-- Isla 2: catálogo. Se hidrata cuando entra en pantalla; recibe los
-         bloques estáticos (Hero, ContextBar, Experiencia) como children,
-         que Astro ya renderizó en HTML plano, sin JavaScript. -->
-    <Catalogo client:visible>
+    <!-- Isla 2: catálogo. client:load (no client:visible): el contenedor
+         que Astro genera para esta isla queda con tamaño 0x0 en el layout
+         real, así que el navegador nunca la detecta como "visible" y
+         client:visible nunca dispara la hidratación (se queda en skeleton
+         para siempre). Mismo bug ya resuelto antes en VerFichaOxxo.
+         Recibe los bloques estáticos (Hero, ContextBar, Experiencia) como
+         children, que Astro ya renderizó en HTML plano, sin JavaScript. -->
+    <Catalogo client:load>
       <HeroEstatico slot="hero" />
       <ContextBarEstatico slot="context-bar" />
       <ExperienciaEstatica slot="experiencia" />
