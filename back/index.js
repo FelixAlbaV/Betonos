@@ -20,6 +20,7 @@ import 'dotenv/config'
 import { timingSafeEqual } from 'node:crypto'
 import { instalarPagos } from './src/pagos.js'
 import { instalarPagosStripe } from './src/pagosStripe.js'
+import { buscarProductos, resumenVentas } from './src/mcp/herramientas.js'
 import { config } from 'dotenv'
 import { fileURLToPath } from 'node:url'
 
@@ -85,7 +86,17 @@ const apollo = new ApolloServer({
 })
 await apollo.start()
 
-app.use(cors(), express.json(), expressMiddleware(apollo, {
+// demo en vivo de las herramientas del servidor MCP (back/src/mcp/),
+// montada aparte del catch-all de GraphQL de abajo
+app.use(cors(), express.json())
+app.get('/mcp-demo/productos', (req, res) => {
+  res.json(buscarProductos(req.query.texto || ''))
+})
+app.get('/mcp-demo/ventas', (req, res) => {
+  res.json(resumenVentas())
+})
+
+app.use(expressMiddleware(apollo, {
   context: async ({ req }) => {
     const autorizado = autorizacionInterna(req.headers)
     console.log('[AUTH INTERNA]', { claveConfigurada: Boolean(process.env.BETONOS_INTERNAL_KEY), autorizado })

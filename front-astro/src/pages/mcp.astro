@@ -1,0 +1,82 @@
+---
+// Demo de las herramientas del servidor MCP (back/src/mcp/servidorMcp.js).
+// El servidor MCP real habla por stdio con un asistente de IA; esta página
+// nomás llama a las mismas dos funciones por HTTP, para poder verlas
+// funcionar aquí en vivo.
+---
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MCP | Betonos</title>
+    <style>
+      body { min-height: 100vh; margin: 0; background: #0d0d0d; color: #f5f5f5;
+        font-family: system-ui, sans-serif; padding: 40px 20px; }
+      main { max-width: 640px; margin: 0 auto; }
+      h1 { font-size: 28px; }
+      h1 span { color: #c9a84c; }
+      p.intro { color: #9a9a9a; line-height: 1.5; }
+      .herramienta { border: 1px solid #3d3d3d; border-radius: 12px; padding: 20px;
+        margin-top: 20px; background: #141414; }
+      .herramienta h2 { margin: 0 0 6px; font-size: 18px; }
+      .herramienta p { margin: 0 0 14px; color: #9a9a9a; font-size: 14px; }
+      input { background: #0d0d0d; border: 1px solid #3d3d3d; color: #f5f5f5;
+        padding: 8px 10px; border-radius: 6px; margin-right: 8px; }
+      button { background: #c9a84c; color: #0d0d0d; border: none; padding: 8px 16px;
+        border-radius: 6px; font-weight: 600; cursor: pointer; }
+      button:hover { opacity: .9; }
+      pre { white-space: pre-wrap; background: #0d0d0d; padding: 12px; border-radius: 8px;
+        margin-top: 14px; font-size: 13px; color: #d4c89a; min-height: 20px; }
+      a { color: #c9a84c; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Herramientas <span>MCP</span></h1>
+      <p class="intro">
+        Betonos también tiene un servidor MCP (back/src/mcp/servidorMcp.js) que
+        expone el catálogo y las ventas como herramientas que un asistente de IA
+        puede consultar. Esta página usa esas mismas dos funciones para que se
+        puedan ver funcionando aquí, en vivo.
+      </p>
+
+      <div class="herramienta">
+        <h2>buscar_productos</h2>
+        <p>Busca audífonos por nombre.</p>
+        <input id="texto" placeholder="ej. gamer" />
+        <button id="btnProductos">Buscar</button>
+        <pre id="salidaProductos"></pre>
+      </div>
+
+      <div class="herramienta">
+        <h2>resumen_ventas</h2>
+        <p>Total de pedidos pagados y monto vendido.</p>
+        <button id="btnVentas">Consultar</button>
+        <pre id="salidaVentas"></pre>
+      </div>
+
+      <p><a href="/">← Volver a Betonos</a></p>
+    </main>
+
+    <script>
+      import { API_ORIGIN } from '../graphql/client.js'
+
+      document.getElementById('btnProductos').addEventListener('click', async () => {
+        const texto = document.getElementById('texto').value
+        const salida = document.getElementById('salidaProductos')
+        salida.textContent = 'buscando...'
+        const datos = await fetch(`${API_ORIGIN}/mcp-demo/productos?texto=${encodeURIComponent(texto)}`).then(r => r.json())
+        salida.textContent = datos.length
+          ? datos.map(p => `${p.nombre} — $${p.precio} (stock: ${p.stock})`).join('\n')
+          : 'No se encontraron productos.'
+      })
+
+      document.getElementById('btnVentas').addEventListener('click', async () => {
+        const salida = document.getElementById('salidaVentas')
+        salida.textContent = 'consultando...'
+        const datos = await fetch(`${API_ORIGIN}/mcp-demo/ventas`).then(r => r.json())
+        salida.textContent = `Pedidos pagados: ${datos.pedidos}. Total vendido: $${datos.total}.`
+      })
+    </script>
+  </body>
+</html>

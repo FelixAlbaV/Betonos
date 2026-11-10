@@ -5,6 +5,9 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:4000/graphql
 // la misma URL pero en ws para las subscriptions
 export const WS_URL = API_URL.replace('https://', 'wss://').replace('http://', 'ws://')
 
+// solo el origen del backend, sin el /graphql, para pegarle a otras rutas
+export const API_ORIGIN = new URL(API_URL).origin
+
 export async function gqlRequest(query, variables = {}) {
   const respuesta = await fetch(API_URL, {
     method: 'POST',

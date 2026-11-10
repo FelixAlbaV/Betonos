@@ -9,7 +9,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
-import { db } from '../db.js'
+import { buscarProductos, resumenVentas } from './herramientas.js'
 
 const server = new McpServer({
   name: 'betonos-mcp',
@@ -26,15 +26,10 @@ server.registerTool(
     },
   },
   async ({ texto }) => {
-    const filas = texto
-      ? db.prepare('SELECT nombre, precio, stock FROM productos WHERE nombre LIKE ? LIMIT 10')
-          .all(`%${texto}%`)
-      : db.prepare('SELECT nombre, precio, stock FROM productos LIMIT 10').all()
-
+    const filas = buscarProductos(texto)
     const lista = filas.length
       ? filas.map((p) => `${p.nombre} — $${p.precio} (stock: ${p.stock})`).join('\n')
       : 'No se encontraron productos.'
-
     return { content: [{ type: 'text', text: lista }] }
   }
 )
@@ -47,11 +42,7 @@ server.registerTool(
     inputSchema: {},
   },
   async () => {
-    const fila = db.prepare(`
-      SELECT COUNT(*) AS pedidos, COALESCE(SUM(total), 0) AS total
-      FROM pedidos WHERE estado = 'PAGADO'
-    `).get()
-
+    const fila = resumenVentas()
     return {
       content: [{
         type: 'text',
