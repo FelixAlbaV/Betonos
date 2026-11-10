@@ -150,7 +150,10 @@ const maxCategoria = Math.max(1, ...resumenCategorias.map(c => c.existencias))
     <NotificacionesAdmin client:idle token={tokenNotificaciones} wsUrl={wsUrlNotificaciones} />
     <div class="admin-layout">
       <aside class="admin-sidebar" aria-label="Navegación administrativa">
-        <a class="admin-logo" href="/"><img src="/betonos-logo.png" alt="" />BE<span>TONOS</span><small>ADMIN</small></a>
+        <a class="admin-logo" href="/">
+          <img src="/betonos-logo.png" alt="" />
+          <div class="admin-logo-texto">BE<span>TONOS</span><small>ADMIN</small></div>
+        </a>
         <div class="admin-side-label">GESTIÓN DE TIENDA</div>
         <nav class="admin-menu">
           <a href="/admin/gestion"><span aria-hidden="true">✎</span> Gestionar tienda</a>

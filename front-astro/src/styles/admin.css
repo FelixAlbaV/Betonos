@@ -21,6 +21,7 @@ button, input, select { font: inherit; }
 .admin-sidebar { background: var(--admin-side); border-right: 1px solid var(--admin-border); padding: 32px 18px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
 .admin-logo { font: 35px/1 'Raleway', sans-serif; letter-spacing: .06em; text-decoration: none; margin: 6px 14px 64px; display: flex; align-items: center; gap: 10px; }
 .admin-logo img { height: 34px; width: auto; flex-shrink: 0; }
+.admin-logo-texto { line-height: 1; }
 .admin-logo span { color: var(--admin-orange); }
 .admin-logo small { display: block; margin-top: 9px; font: 700 9px 'Inter', sans-serif; letter-spacing: .35em; color: var(--admin-muted); }
 .admin-side-label, .admin-eyebrow { color: var(--admin-gold); font-size: 10px; letter-spacing: .17em; font-weight: 800; }
