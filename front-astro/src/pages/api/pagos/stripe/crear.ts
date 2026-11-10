@@ -29,7 +29,7 @@ export const POST: APIRoute = async ({ request }) => {
     const clave = import.meta.env.STRIPE_SECRET_KEY
     if (!clave) throw new Error('Falta STRIPE_SECRET_KEY en front-astro/.env')
 
-    // La fuente de precios es SQLite: el cliente nunca decide el monto.
+    // los precios salen de la bd, el cliente no manda el monto
     const data = await consultarBackend(`
       mutation ($input: PedidoInput!) {
         registrarPedido(input: $input) {

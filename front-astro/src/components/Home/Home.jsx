@@ -3,8 +3,7 @@
 import { Sidebar } from '../Sidebar/Sidebar'
 import estilos from './Home.module.css'
 
-// Home compone: Sidebar (categorías) + Hero + ContextBar + grid principal.
-// TopBar y Footer viven en App.jsx porque son comunes a todas las vistas.
+// TopBar y Footer van en App.jsx porque se repiten en todas las vistas
 export function Home({ categorias, onSeleccionarCategoria, hero, contextBar, experiencia }) {
   return (
     <div className={estilos.layout}>

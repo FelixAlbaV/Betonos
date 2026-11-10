@@ -1,4 +1,3 @@
-// src/context/AppContext.jsx
 import { createContext, useContext, useMemo } from 'react'
 
 const AppContext = createContext(null)

@@ -1,15 +1,5 @@
-// src/islas/VistaConfirmacion/VistaConfirmacion.jsx
-//
-// ISLA 6 de 7: Confirmación de pedido (dentro del flujo de una sola página).
-//
-// Nota para quien siga el código: hoy el pago real redirige al navegador a
-// la página /pago (front-astro/src/pages/pago.astro), que consulta el
-// pedido directamente en el servidor (SSR) y no pasa por aquí. Esta isla
-// se conserva porque navegacionStore.confirmarPedido() sigue existiendo y
-// podría usarse en un flujo sin redirección a futuro; no se borró
-// funcionalidad previa.
-//
-// Por qué client:idle: mismo criterio que las demás vistas "bajo demanda".
+// ojo: el pago real ahora redirige a /pago.astro (SSR) y no pasa por aquí,
+// pero dejo esto porque confirmarPedido() del store todavía se usa
 import { AppProvider } from '../../context/AppContext'
 import { Confirmacion } from '../../components/Confirmacion/Confirmacion'
 import { useNavegacionStore, VISTAS } from '../../store/navegacionStore'

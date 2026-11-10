@@ -36,7 +36,7 @@ export const POST: APIRoute = async ({ request }) => {
   if (!correo || !permitidos.includes(correo)) {
     return Response.json({ error: 'Acceso denegado.' }, { status: 403 })
   }
-  // Comprobación de origen explícita además de la protección CSRF de Astro.
+  // checamos origin aparte del csrf que ya trae astro
   const origin = request.headers.get('origin')
   if (!origin || origin !== new URL(request.url).origin) {
     return Response.json({ error: 'Origen no autorizado.' }, { status: 403 })

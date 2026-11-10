@@ -36,7 +36,6 @@ if (!tablasExisten()) {
   process.exit(1)
 }
 
-// Los resolvers de pago deben instalarse cuando SÍ existe la base de datos.
 instalarPagos(resolvers)
 instalarPagosStripe(resolvers)
 instalarAdminCrud(resolvers)
@@ -59,16 +58,9 @@ function autorizacionInterna(headers) {
 const app = express()
 const httpServer = http.createServer(app)
 
-// Subscriptions viven en el mismo puerto, sobre WebSocket. El context de la
-// conexión se construye UNA vez al conectar (no por cada evento).
-// Hay dos tipos de canal: uno PRIVADO (avisos de pago, solo admin) y uno
-// PÚBLICO (cambios de producto/stock, cualquier cliente de la tienda).
-// Por eso el token aquí es OPCIONAL: si llega, se revisa y se guarda el
-// correo en contexto.adminEmail; si no llega, la conexión igual se acepta,
-// pero solo podrá escuchar canales públicos — "pedidoConfirmado" exige
-// contexto.adminEmail dentro de su propio resolver (ver notificaciones.js).
-// Sin "path" fijo: igual que las queries HTTP, acepta cualquier ruta
-// (PUBLIC_API_URL puede terminar en "/" o en "/graphql" según el entorno).
+// ws corre en el mismo puerto. el token es opcional: si viene se guarda
+// el correo en adminEmail, si no igual se deja conectar pero solo puede
+// oir canales publicos (pedidoConfirmado pide adminEmail en su resolver)
 const wsServer = new WebSocketServer({ server: httpServer })
 const limpiezaWs = useServer({
   schema,
@@ -94,7 +86,6 @@ const apollo = new ApolloServer({
 await apollo.start()
 
 app.use(cors(), express.json(), expressMiddleware(apollo, {
-  // Queries y mutations: una petición HTTP = una validación con la clave interna.
   context: async ({ req }) => {
     const autorizado = autorizacionInterna(req.headers)
     console.log('[AUTH INTERNA]', { claveConfigurada: Boolean(process.env.BETONOS_INTERNAL_KEY), autorizado })

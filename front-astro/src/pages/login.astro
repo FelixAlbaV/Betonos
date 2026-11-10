@@ -69,9 +69,7 @@ if (session) return Astro.redirect('/')
     </main>
 
     <script>
-      // El login real con Google requiere un POST con token CSRF, no un
-      // simple link GET (Auth.js lo rechaza con UnknownAction). El helper
-      // signIn() de auth-astro/client arma esa petición correctamente.
+      // signIn necesita hacer POST con csrf, un link normal no funciona
       const { signIn } = await import('auth-astro/client')
       document.querySelector('#boton-login').addEventListener('click', () => signIn('google'))
     </script>

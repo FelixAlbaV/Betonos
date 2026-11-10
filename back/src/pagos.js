@@ -1,4 +1,3 @@
-// Agrega las operaciones de pago sin reemplazar src/resolvers.js.
 import { GraphQLError } from 'graphql'
 import { db } from './db.js'
 import { pubsub, CANAL_PEDIDO_CONFIRMADO } from './tiempoReal/pubsub.js'
@@ -12,14 +11,12 @@ function accesoInterno(contexto) {
 }
 
 export function instalarPagos(resolvers) {
-  // Migración no destructiva: conserva todas las tablas y datos existentes.
   db.exec(`CREATE TABLE IF NOT EXISTS pagos_mercadopago (
     pedido_id INTEGER PRIMARY KEY REFERENCES pedidos(id),
     pago_id TEXT NOT NULL UNIQUE,
     confirmado_en TEXT NOT NULL
   )`)
 
-  // Evita que un navegador cree productos, consulte pedidos ajenos o marque pagos.
   for (const nombre of ['pedido', 'pedidos']) {
     const original = resolvers.Query[nombre]
     resolvers.Query[nombre] = (...args) => {
@@ -44,7 +41,6 @@ export function instalarPagos(resolvers) {
     }
   }
 
-  // Reemplaza SOLO la mutación de compra; no toca las consultas del catálogo.
   resolvers.Mutation.registrarPedido = (_p, { input }, contexto) => {
     accesoInterno(contexto)
     if (!input.clienteNombre?.trim() || !input.clienteEmail?.trim() ||
@@ -83,7 +79,7 @@ export function instalarPagos(resolvers) {
           (pedido_id, producto_id, cantidad, precio_unitario) VALUES (?, ?, ?, ?)`)
           .run(info.lastInsertRowid, linea.id, linea.cantidad, linea.precio)
       }
-      // No se descuenta inventario antes de que se apruebe el pago.
+      // el stock se descuenta hasta que se confirma el pago, no aqui
       return db.prepare('SELECT * FROM pedidos WHERE id = ?').get(info.lastInsertRowid)
     })
     const fila = guardar()
@@ -113,7 +109,7 @@ export function instalarPagos(resolvers) {
         if (String(anterior.pedido_id) !== String(pedidoId) || anterior.pago_id !== paymentId) {
           throw new GraphQLError('Pago duplicado o asociado a otro pedido.')
         }
-        return pedido // Reintento del mismo webhook: sin descontar dos veces.
+        return pedido // webhook repetido, no descontar de nuevo
       }
       if (pedido.estado !== 'PENDIENTE') throw new GraphQLError('Pedido no pendiente.')
       const items = db.prepare(`SELECT producto_id, cantidad FROM pedido_items
@@ -138,16 +134,12 @@ export function instalarPagos(resolvers) {
       clienteEmail: fila.cliente_email, fecha: fila.fecha,
       estado: fila.estado, total: fila.total,
     }
-    // Solo se avisa en vivo cuando el pago se confirma por primera vez,
-    // no en reintentos del webhook sobre un pedido ya pagado.
+    // solo avisamos si es la primera vez que se confirma, no en retries
     if (esConfirmacionNueva) pubsub.publish(CANAL_PEDIDO_CONFIRMADO, { pedidoConfirmado })
     return pedidoConfirmado
   }
 
-  // Se usa cuando un pago con tarjeta (Stripe o MP) es rechazado o queda en un
-  // estado no válido: el pedido nunca llegó a pagarse, así que no debe quedar
-  // guardado. Es seguro porque registrarPedido nunca descuenta stock -- eso
-  // solo pasa al confirmar el pago (arriba). Nunca borra un pedido ya PAGADO.
+  // para cuando el pago falla y hay que tirar el pedido pendiente
   resolvers.Mutation.eliminarPedidoPendiente = (_p, { id }, contexto) => {
     accesoInterno(contexto)
     const eliminar = db.transaction(() => {

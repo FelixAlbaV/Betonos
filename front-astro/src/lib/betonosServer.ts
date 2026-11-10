@@ -1,4 +1,4 @@
-// Solo importarlo en rutas Astro del servidor, NUNCA en componentes React.
+// esto solo se importa en rutas de astro, no en componentes react
 export async function consultarBackend(query: string, variables = {}) {
   const url = import.meta.env.PUBLIC_API_URL || 'http://localhost:4000/graphql'
   const clave = import.meta.env.BETONOS_INTERNAL_KEY

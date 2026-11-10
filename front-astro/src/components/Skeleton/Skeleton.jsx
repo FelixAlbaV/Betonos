@@ -1,4 +1,3 @@
-// src/components/Skeleton/Skeleton.jsx
 import estilos from './Skeleton.module.css'
 
 export function Skeleton({ width = '100%', height = '16px', style }) {

@@ -1,4 +1,3 @@
-// src/schema.js
 export const typeDefs = `#graphql
   type Categoria {
     id: ID!
@@ -17,7 +16,6 @@ export const typeDefs = `#graphql
     categoria: Categoria!
   }
 
-  "Estado del ciclo de vida de un pedido."
   enum EstadoPedido {
     PENDIENTE
     PAGADO
@@ -25,7 +23,6 @@ export const typeDefs = `#graphql
     CANCELADO
   }
 
-  "Un producto dentro de un pedido, con la cantidad y el precio al momento de la compra."
   type PedidoItem {
     id: ID!
     producto: Producto!
@@ -66,7 +63,6 @@ export const typeDefs = `#graphql
     categoriaId: ID!
   }
 
-  "Un renglón del carrito al momento de registrar el pedido."
   input PedidoItemInput {
     productoId: ID!
     cantidad: Int!
@@ -91,7 +87,6 @@ export const typeDefs = `#graphql
     categorias: [Categoria!]!
     categoria(id: ID!): Categoria
 
-    "Catálogo de productos, filtrable por categoría y/o texto de búsqueda, con paginación."
     productos(categoriaId: ID, buscar: String, limit: Int = 20, offset: Int = 0): [Producto!]!
     producto(id: ID!): Producto
 
@@ -104,31 +99,23 @@ export const typeDefs = `#graphql
     actualizarCategoria(id: ID!, input: CategoriaInput!): Categoria!
     eliminarCategoria(id: ID!): Boolean!
     actualizarEnvio(pedidoId: ID!, estado: EstadoEnvio!): EstadoEnvio!
-    # CRUD de productos
     crearProducto(input: ProductoInput!): Producto!
     actualizarProducto(id: ID!, input: ProductoInput!): Producto!
     eliminarProducto(id: ID!): Boolean!
 
-    "Mutation de negocio: registra un pedido a partir del carrito, descuenta stock y calcula el total."
     registrarPedido(input: PedidoInput!): Pedido!
 
-    "Mutation de negocio: avanza o cambia el estado de un pedido."
     actualizarEstadoPedido(id: ID!, estado: EstadoPedido!): Pedido!
     confirmarPagoMercadoPago(pedidoId: ID!, paymentId: String!, monto: Float!, moneda: String!): Pedido!
     confirmarPagoStripe(pedidoId: ID!, sesionId: String!, montoCentavos: Int!, moneda: String!): Pedido!
 
-    "Mutation de negocio: borra un pedido que nunca llegó a pagarse (solo si sigue PENDIENTE). No toca stock porque nunca se descontó."
     eliminarPedidoPendiente(id: ID!): Boolean!
 
-    "Entrega un token corto para conectarse al canal de notificaciones en vivo del admin."
     crearTokenAdmin(email: String!): String!
   }
 
   type Subscription {
-    "Avisa al panel admin, en tiempo real, cuando un pedido se confirma como PAGADO."
     pedidoConfirmado: Pedido!
-
-    "Avisa a cualquier cliente viendo la tienda, en tiempo real, cuando un producto cambia (p. ej. su stock o precio). Pública: no requiere ser admin."
     productoActualizado: Producto!
   }
 `

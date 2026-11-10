@@ -1,15 +1,5 @@
-// src/islas/PanelCarrito/PanelCarrito.jsx
-//
-// ISLA 4 de 7: Carrito de compras.
-//
-// Qué hace: muestra los productos agregados (vienen de cartStore, que ya
-// existía) y permite ir a pagar. Se envuelve en su propio <AppProvider>
-// porque necesita formatearPrecio() del contexto de la app; cada isla
-// trae su propio Provider en vez de compartir uno global, precisamente
-// para no depender de ningún otro componente de la página.
-//
-// Por qué client:idle: el carrito no se usa hasta que el usuario decide
-// revisarlo, así que no vale la pena adelantarla antes que el catálogo.
+// muestra el carrito (cartStore) y deja ir a pagar
+// cada isla trae su propio AppProvider para no depender de otro componente
 import { AppProvider } from '../../context/AppContext'
 import { Carrito } from '../../components/Carrito/Carrito'
 import { useNavegacionStore, VISTAS } from '../../store/navegacionStore'

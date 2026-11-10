@@ -1,4 +1,3 @@
-// src/components/Hero/Hero.jsx
 import estilos from './Hero.module.css'
 
 export function Hero() {

@@ -48,8 +48,7 @@ function FormularioOxxo({ pedido, alError }) {
   const guardarFicha = useOxxoStore((estado) => estado.guardarFicha)
   const obtenerFicha = useOxxoStore((estado) => estado.obtenerFicha)
 
-  // Si ya se generó la ficha antes (en esta misma sesión del navegador),
-  // se muestra la guardada en vez de volver a pedirle una a Mercado Pago.
+  // si ya hay ficha guardada de esta sesión, se usa esa en vez de pedir otra
   useEffect(() => {
     const guardada = obtenerFicha(pedido.pedidoId)
     if (guardada) setFicha(guardada)
@@ -104,17 +103,14 @@ function FormularioMercadoPago({ pedido, alRechazar, alError }) {
 
   const procesar = async (datosTarjeta, datosAdicionales) => {
     try {
-      // El backend solo responde 200 cuando MP acreditó el pago de verdad.
-      // Cualquier otro resultado (rechazado O pendiente — con tarjeta "pendiente"
-      // no es válido, a diferencia de OXXO) llega aquí como error, con el
-      // mensaje exacto del motivo (tarjeta vencida, fondos insuficientes, etc.).
+      // el backend solo responde 200 si MP acreditó de verdad, lo demás cae en el catch
       await solicitar('/api/pagos/procesar', {
         pedidoId: pedido.pedidoId,
         datosTarjeta,
-        // Orders exige tipo de tarjeta; el Brick lo entrega como paymentTypeId.
+        // Orders pide el tipo de tarjeta, el Brick lo da como paymentTypeId
         tipoPago: datosAdicionales?.paymentTypeId || datosTarjeta?.payment_type_id,
       })
-      // Solo se llega aquí si MP acreditó el pago.
+      // aquí ya se acreditó el pago
       window.location.assign(`/pago?pedido=${encodeURIComponent(pedido.pedidoId)}`)
     } catch (error) {
       alRechazar(error.message || 'El pago no fue aprobado. Revisa tu tarjeta e inicia un nuevo intento.')
@@ -159,8 +155,7 @@ export function Checkout({ onVolver, user }) {
     setError('')
     setIniciando(true)
     try {
-      // OXXO usa el mismo endpoint que Mercado Pago con tarjeta: ambos solo
-      // necesitan registrar el pedido. La diferencia está en cómo se cobra.
+      // OXXO usa el mismo endpoint que MP con tarjeta, la diferencia es cómo se cobra
       const ruta = metodo === 'stripe' ? '/api/pagos/stripe/crear' : '/api/pagos/crear'
       const datos = await solicitar(ruta, {
         nombre,

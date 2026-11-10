@@ -42,14 +42,13 @@ function verCategoria(row) {
 }
 
 export function instalarAdminCrud(resolvers) {
-  // Solo crea una tabla nueva: nunca modifica ni borra pedidos, productos o pagos.
   db.exec(`CREATE TABLE IF NOT EXISTS seguimiento_envios (
     pedido_id INTEGER PRIMARY KEY REFERENCES pedidos(id),
     estado TEXT NOT NULL DEFAULT 'SIN_INICIAR',
     actualizado_en TEXT NOT NULL
   )`)
 
-  // Seguridad adicional: protege el CRUD original aun si todavía no instalaste pagos.js.
+  // por si acaso pagos.js no se instalo todavia
   for (const nombre of ['crearProducto', 'actualizarProducto', 'eliminarProducto']) {
     const original = resolvers.Mutation[nombre]
     if (typeof original !== 'function') throw Error(`Falta mutation ${nombre}`)
@@ -93,7 +92,6 @@ export function instalarAdminCrud(resolvers) {
     return db.prepare('DELETE FROM categorias WHERE id = ?').run(id).changes > 0
   }
 
-  // El estado de envío es INDEPENDIENTE del estado del pago.
   resolvers.Pedido.estadoEnvio = (pedido) =>
     db.prepare('SELECT estado FROM seguimiento_envios WHERE pedido_id = ?').get(pedido.id)?.estado || 'SIN_INICIAR'
 
@@ -111,7 +109,7 @@ export function instalarAdminCrud(resolvers) {
       VALUES (?, ?, ?)
       ON CONFLICT(pedido_id) DO UPDATE SET estado=excluded.estado, actualizado_en=excluded.actualizado_en`)
       .run(pedidoId, estado, new Date().toISOString())
-    // No cambiamos pedidos.estado: Stripe/Mercado Pago siguen siendo fuente de verdad del cobro.
+    // el estado del pago sigue siendo de stripe/mp, esto no lo toca
     return estado
   }
 }

@@ -1,6 +1,4 @@
-// src/seed.js
-// Crea las tablas (si no existen) y carga los datos semilla desde db.sql.
-// Uso: npm run seed
+// npm run seed
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -9,8 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const sqlPath = path.join(__dirname, '..', '..', 'db.sql')
 const dbFilePath = path.join(__dirname, '..', 'data', 'betonos.db')
 
-// Borramos la base previa para que correr el seed siempre sea reproducible
-// (evita duplicar filas si se ejecuta más de una vez).
+// borra la db vieja para no duplicar filas si se corre otra vez
 for (const ext of ['', '-wal', '-shm']) {
   const f = dbFilePath + ext
   if (fs.existsSync(f)) fs.unlinkSync(f)

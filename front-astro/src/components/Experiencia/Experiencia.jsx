@@ -1,6 +1,4 @@
-// src/components/Experiencia/Experiencia.jsx
-// Sección de contexto para el Home: le da cuerpo a la página con 3 razones
-// para comprar en Betonos, antes de mostrar el grid de categorías.
+// bloque de las 3 razones antes del grid de categorias
 import estilos from './Experiencia.module.css'
 
 const RAZONES = [

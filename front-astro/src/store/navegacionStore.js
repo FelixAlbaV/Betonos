@@ -1,19 +1,8 @@
-// src/store/navegacionStore.js
-//
-// ¿Por qué existe este archivo?
-// Antes toda la navegación (qué "vista" se muestra: inicio, categoría,
-// carrito, checkout...) vivía dentro de un solo componente React gigante
-// (App.jsx) con un useReducer local. Eso obligaba a montar TODO junto en
-// una sola isla de Astro, porque solo un componente conocía el estado.
-//
-// Ahora la navegación vive en un store de Zustand (igual que ya se hacía
-// con el carrito en cartStore.js). Así, cada isla de Astro puede montarse
-// por separado, "escuchar" solo el pedazo de estado que le interesa, y
-// mostrarse u ocultarse sola, sin depender de un componente padre común.
+// store de zustand para la navegación, así cada isla puede montarse
+// por separado sin depender de un componente padre
 import { create } from 'zustand'
 
-// Las "vistas" posibles del flujo de compra. No usamos react-router ni
-// cambiamos la URL: es navegación 100% por estado, igual que antes.
+// no usamos react-router, la navegación es solo por estado
 export const VISTAS = {
   HOME: 'home',
   CATEGORIA: 'categoria',
@@ -26,7 +15,7 @@ export const useNavegacionStore = create((set) => ({
   vista: VISTAS.HOME,
   categoriaId: null,
   categoriaNombre: null,
-  productoId: null, // si no es null, el modal de detalle de producto está abierto
+  productoId: null, // si tiene valor, el modal de producto está abierto
   ultimoPedido: null,
 
   irAHome: () =>

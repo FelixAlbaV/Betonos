@@ -1,4 +1,3 @@
-// src/components/Carrito/Carrito.jsx
 import { useCartStore } from '../../store/cartStore'
 import { useAppContext } from '../../context/AppContext'
 import { obtenerImagenProducto } from '../../utils/imagenesProductos'

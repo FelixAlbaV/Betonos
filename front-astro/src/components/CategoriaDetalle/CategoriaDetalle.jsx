@@ -11,8 +11,7 @@ export function CategoriaDetalle({ categoriaId, categoriaNombre, onVolver, onAbr
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
 
-  // useEffect: vuelve a consultar el backend cada vez que cambia la categoría
-  // seleccionada (dependencia [categoriaId]).
+  // se vuelve a pedir cuando cambia la categoria
   useEffect(() => {
     let cancelado = false
 
@@ -35,9 +34,7 @@ export function CategoriaDetalle({ categoriaId, categoriaNombre, onVolver, onAbr
     }
   }, [categoriaId])
 
-  // Canal en vivo (público, sin login): si el admin cambia un producto que
-  // ya está en pantalla (precio, stock, etc.), se actualiza solo, al
-  // instante, sin que el cliente tenga que recargar la página.
+  // suscripcion para que los productos se actualicen solos si el admin cambia algo
   useEffect(() => {
     const client = createClient({ url: WS_URL })
 
@@ -72,8 +69,7 @@ export function CategoriaDetalle({ categoriaId, categoriaNombre, onVolver, onAbr
 
       {cargando && (
         <div className={estilos.grid}>
-          {/* keys por índice: son placeholders sin identidad propia, no hay
-              riesgo de reordenamiento con estado. */}
+          {/* son placeholders nomas, no importa el key por indice */}
           {Array.from({ length: 6 }).map((_, indice) => (
             <SkeletonTarjetaProducto key={indice} />
           ))}

@@ -1,4 +1,3 @@
-// src/resolvers.js
 import { GraphQLError } from 'graphql'
 import { db } from './db.js'
 
@@ -7,8 +6,6 @@ function noEncontrado(nombreTipo, id) {
     extensions: { code: 'NOT_FOUND' },
   })
 }
-
-// ---------- Mapeadores snake_case (DB) -> camelCase (GraphQL) ----------
 
 function mapProducto(row) {
   if (!row) return null
@@ -135,7 +132,6 @@ export const resolvers = {
         })
       }
 
-      // Transacción: valida stock, descuenta inventario, crea pedido + items.
       const transaccion = db.transaction((datos) => {
         let total = 0
         const lineas = []
@@ -187,7 +183,6 @@ export const resolvers = {
     },
   },
 
-  // ---------- Resolvers de relación ----------
   Categoria: {
     productos: (categoria) =>
       db.prepare('SELECT * FROM productos WHERE categoria_id = ?').all(categoria.id).map(mapProducto),

@@ -1,4 +1,3 @@
-// src/components/ProductoCard/ProductoCard.jsx
 import { Fragment } from 'react'
 import { useAppContext } from '../../context/AppContext'
 import { obtenerImagenProducto } from '../../utils/imagenesProductos'
@@ -11,8 +10,7 @@ export function ProductoCard({ producto, onClick }) {
 
   return (
     <button className={estilos.tarjeta} onClick={() => onClick(producto.id)}>
-      {/* Fragment: agrupa la imagen y la info sin envolverlas en un div extra
-          (el <button> ya es el contenedor real). */}
+      {/* fragment pa no meter un div extra, el button ya es el contenedor */}
       <Fragment>
         <div className={estilos.imagenContenedor}>
           {urlImagen ? (

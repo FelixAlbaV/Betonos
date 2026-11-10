@@ -3,7 +3,7 @@ import type { APIRoute } from 'astro'
 import { MercadoPagoConfig, Preference } from 'mercadopago'
 
 export const POST: APIRoute = async () => {
-  // Endpoint temporal: solo funciona durante el desarrollo.
+  // esto es solo para probar en dev, no en prod
   if (import.meta.env.PROD) {
     return new Response('No disponible', { status: 404 })
   }

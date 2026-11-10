@@ -1,4 +1,3 @@
-// src/components/Confirmacion/Confirmacion.jsx
 import { useAppContext } from '../../context/AppContext'
 import estilos from './Confirmacion.module.css'
 

@@ -1,4 +1,3 @@
-// src/components/ProductoDetalle/ProductoDetalle.jsx
 import { useEffect, useState } from 'react'
 import { Portal } from '../Portal/Portal'
 import { gqlRequest, OBTENER_PRODUCTO } from '../../graphql/client'
@@ -48,7 +47,7 @@ export function ProductoDetalle({ productoId, onCerrar, user }) {
   setAgregado(true)
 }
 
-  // Cierra el modal con la tecla Escape (evento de teclado a nivel documento).
+  // escape cierra el modal
   useEffect(() => {
     function alPresionarTecla(evento) {
       if (evento.key === 'Escape') onCerrar()

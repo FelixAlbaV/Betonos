@@ -1,7 +1,4 @@
-// src/store/oxxoStore.js
-// Guarda la ficha de pago OXXO en localStorage (mismo patrón que cartStore),
-// para poder volver a verla después de cerrar o recargar la página, sin
-// tener que generar otra ficha ni volver a llamar a Mercado Pago.
+// guarda la ficha oxxo en localStorage para no perderla al recargar
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 

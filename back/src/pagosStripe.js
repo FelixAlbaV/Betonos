@@ -84,8 +84,7 @@ export function instalarPagosStripe(resolvers) {
     })
 
     const pedidoConfirmado = confirmar()
-    // Solo se avisa en vivo cuando el pago se confirma por primera vez,
-    // no en reintentos del webhook sobre un pedido ya pagado.
+    // nada mas en la primera confirmacion, no en retries
     if (esConfirmacionNueva) pubsub.publish(CANAL_PEDIDO_CONFIRMADO, { pedidoConfirmado })
     return pedidoConfirmado
   }

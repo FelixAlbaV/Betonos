@@ -1,10 +1,4 @@
-// src/components/TopBar/TopBar.jsx
-//
-// Esta pieza es la isla "BarraSuperior" (ver src/islas/BarraSuperior).
-// Es independiente: ya no recibe funciones de navegación desde un padre
-// (onIrAHome, onIrACarrito), sino que llama directamente al store global
-// de navegación (navegacionStore). Así puede montarse sola con client:load
-// sin necesitar que exista ningún otro componente en la página.
+// usa el store de navegación directo en vez de recibir funciones por props
 import { signOut } from 'auth-astro/client'
 import { useCartStore } from '../../store/cartStore'
 import { useNavegacionStore } from '../../store/navegacionStore'
@@ -12,8 +6,7 @@ import estilos from './TopBar.module.css'
 import { useEffect, useState } from 'react'
 
 export function TopBar({ user }) {
-  // Selector de Zustand: el componente solo se re-renderiza cuando
-  // cambia la cantidad total de artículos, no en cada cambio del store.
+  // solo re-renderiza cuando cambia el total, no con cualquier cambio del store
   const totalItems = useCartStore((estado) => estado.totalItems())
   const irAHome = useNavegacionStore((estado) => estado.irAHome)
   const irACarrito = useNavegacionStore((estado) => estado.irACarrito)
@@ -22,9 +15,7 @@ export function TopBar({ user }) {
       setMontado(true)
     }, [])
 
-  // Si no hay sesión, el carrito guardado de una sesión anterior no debe
-  // seguir visible. Esta isla es la primera en montarse (client:load),
-  // así que es el lugar natural para esta limpieza.
+  // sin sesión no debe quedar visible el carrito de una sesión anterior
   useEffect(() => {
     if (!user) useCartStore.getState().vaciarCarrito()
   }, [user])

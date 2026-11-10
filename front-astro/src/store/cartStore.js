@@ -1,4 +1,3 @@
-// src/store/cartStore.js
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
@@ -35,7 +34,6 @@ export const useCartStore = create(persist((set, get) => ({
 
   vaciarCarrito: () => set({ items: [] }),
 
-  // Selectores derivados
   totalItems: () => get().items.reduce((suma, i) => suma + i.cantidad, 0),
   totalPrecio: () => get().items.reduce((suma, i) => suma + i.cantidad * i.precio, 0),
 }), {

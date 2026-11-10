@@ -1,4 +1,3 @@
-// src/components/Sidebar/Sidebar.jsx
 import estilos from './Sidebar.module.css'
 
 export function Sidebar({ categorias, categoriaActivaId, onSeleccionar }) {
@@ -7,7 +6,6 @@ export function Sidebar({ categorias, categoriaActivaId, onSeleccionar }) {
       <p className={estilos.titulo}>Categorías</p>
       <ul className={estilos.lista}>
         {categorias.map((categoria) => (
-          // key requerida por React al renderizar una lista dinámica
           <li
             key={categoria.id}
             className={categoria.id === categoriaActivaId ? estilos.itemActivo : estilos.item}

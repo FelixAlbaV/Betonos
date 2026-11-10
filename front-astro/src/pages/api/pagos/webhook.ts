@@ -8,7 +8,7 @@ const confirmar = (pedidoId: string, pagoId: string, monto: number, moneda: stri
       monto: $monto, moneda: $moneda) { id estado }
   }`, { pedidoId, paymentId: pagoId, monto, moneda })
 
-// Validación independiente por servidor: no se confía en el cuerpo del webhook.
+// no confiamos en el body del webhook, se valida todo por separado
 export const POST: APIRoute = async ({ request }) => {
   const url = new URL(request.url)
   const cuerpo = await request.json().catch(() => ({}))
@@ -56,10 +56,10 @@ export const POST: APIRoute = async ({ request }) => {
           Math.round(Number(pagos[0].amount) * 100) !== Math.round(total * 100)) {
         return Response.json({ error: 'Datos de la order inconsistentes' }, { status: 400 })
       }
-      // GraphQL hace la verificación de monto del pedido y previene confirmaciones duplicadas.
+      // el resolver de graphql ya checa el monto y evita confirmar doble
       await confirmar(pedidoId, id, total, 'MXN')
     } else {
-      // Compatibilidad con webhooks previos de Checkout Pro / Payments.
+      // esto es para webhooks viejos de checkout pro
       const pago = await new Payment(new MercadoPagoConfig({ accessToken: token })).get({ id })
       if (pago.status !== 'approved') return Response.json({ recibido: true, estado: pago.status })
       if (!/^\d+$/.test(String(pago.external_reference || '')) ||

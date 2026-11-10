@@ -27,8 +27,7 @@ const mapearPedido = (row) => ({
   total: row.total,
 })
 
-// Solo instala dos consultas nuevas. No cambia los pedidos, stock, cobros ni CRUD.
-// Astro obtiene el correo de la sesión Google, NO del navegador.
+// el correo viene de la sesion de google en astro, no del navegador
 export function instalarPanelUsuario(resolvers) {
   resolvers.Query.misPedidos = (_padre, { correo, limit, offset }, contexto) => {
     exigirServidor(contexto)

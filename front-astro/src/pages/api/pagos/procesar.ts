@@ -3,8 +3,7 @@ import { getSession } from 'auth-astro/server'
 import { createHmac } from 'node:crypto'
 import { consultarBackend, CONSULTAR_PEDIDO } from '../../../lib/betonosServer'
 
-// Con tarjeta no hay "pendiente" válido: si MP no acredita el pago, el pedido
-// nunca llegó a pagarse y no debe quedar guardado (nunca se le descontó stock).
+// con tarjeta no existe "pendiente", si no se acredita se borra el pedido
 async function eliminarPedidoFallido(pedidoId: string) {
   try {
     await consultarBackend(`
@@ -15,8 +14,7 @@ async function eliminarPedidoFallido(pedidoId: string) {
   }
 }
 
-// Checkout API via Orders, NO Payments.create() (/v1/payments).
-// El CardPayment Brick tokeniza los datos; este endpoint NUNCA recibe PAN ni CVV.
+// usamos Orders, no Payments.create(). el Brick tokeniza, aquí nunca llega el PAN ni el CVV
 const VALID_ORDER_ID = /^[A-Z0-9][A-Z0-9_-]{9,99}$/
 const dinero = (valor: number) => valor.toFixed(2)
 
@@ -30,12 +28,8 @@ async function obtenerOrder(id: string, token: string) {
   return r.json()
 }
 
-// Mensajes para los "status_detail" que manda Mercado Pago, tanto en tarjetas
-// reales rechazadas como en las tarjetas de prueba (APRO, OTHE, CONT, etc.).
-// La API de Orders los manda SIN el prefijo "cc_rejected_" que usa la API vieja
-// de Payments (p. ej. "bad_filled_card_data" en vez de "cc_rejected_bad_filled_card_number"),
-// así que las claves de este mapa van normalizadas sin ese prefijo.
-// Doc de nombres de prueba: https://www.mercadopago.com.mx/developers/es/docs/checkout-api/integration-test/test-cards
+// mensajes según el status_detail de MP. la API de Orders no manda el prefijo
+// "cc_rejected_" que sí usaba la API vieja, por eso las claves van sin eso
 const MENSAJES_STATUS_DETAIL: Record<string, string> = {
   accredited: 'Pago aprobado.',
   other_reason: 'Rechazado por un error general del banco. Intenta de nuevo o usa otra tarjeta.',
@@ -64,7 +58,7 @@ function mensajeParaStatusDetail(detalle: string | undefined) {
   return MENSAJES_STATUS_DETAIL[normalizado] || `El pago no fue aprobado (motivo: ${detalle}). Intenta de nuevo o usa otra tarjeta.`
 }
 
-// No usamos la respuesta del navegador para declarar una venta pagada.
+// no confiamos en lo que manda el navegador para marcar la venta como pagada
 function acreditada(order: any, pedidoId: string, total: number) {
   const pagos = order?.transactions?.payments
   const monedaCompatible = (!order.currency_id || order.currency_id === 'MXN') &&
@@ -112,7 +106,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const total = dinero(pedido.total)
-    // Llave fija por pedido: no duplicar cargos en reintentos / caídas de red.
+    // llave fija por pedido para no duplicar cargos si falla la red y se reintenta
     const idempotencyKey = createHmac('sha256', clave).update(`mp-orders:${id}`).digest('hex')
     const r = await fetch('https://api.mercadopago.com/v1/orders', {
       method: 'POST',
@@ -140,10 +134,8 @@ export const POST: APIRoute = async ({ request }) => {
     })
     const respuesta = await r.json().catch(() => ({}))
     if (!r.ok) {
-      // Cuando MP rechaza la order en la misma respuesta de creación (sin
-      // llegar a existir de forma consultable), el motivo real no está en
-      // "errors[].code" (siempre dice "failed", genérico) sino adentro de
-      // "data.transactions.payments[0].status_detail".
+      // cuando MP rechaza al crear la order, el motivo real no está en errors[].code
+      // (siempre dice "failed") sino en data.transactions.payments[0].status_detail
       const statusDetailCreacion = respuesta?.data?.transactions?.payments?.[0]?.status_detail
       console.error('[MP Orders create] rechazada al crear', { status: r.status, statusDetail: statusDetailCreacion })
       await eliminarPedidoFallido(id)
@@ -155,12 +147,12 @@ export const POST: APIRoute = async ({ request }) => {
 
     const idOrder = String(respuesta.id || '')
     if (!VALID_ORDER_ID.test(idOrder)) {
-      // Puede haberse creado la order, nunca repetir a ciegas.
+      // puede que sí se haya creado, mejor no reintentar a ciegas
       console.error('[MP Orders create] No se recibió ID de order verificable')
       return Response.json({ error: 'MP respondió sin ID verificable. Consulta el pedido antes de reintentar.' }, { status: 502 })
     }
 
-    // Segunda consulta a MP: solo confirmamos pagos acreditados y verificados en servidor.
+    // segunda consulta a MP, solo confirmamos lo que se verificó del lado del servidor
     const order = await obtenerOrder(idOrder, token)
     const pagoIntento = order?.transactions?.payments?.[0]
     const statusDetail = pagoIntento?.status_detail || order.status_detail
@@ -179,10 +171,8 @@ export const POST: APIRoute = async ({ request }) => {
       return Response.json({ pedidoId: id, estado: order.status, orderId: idOrder })
     }
 
-    // Con tarjeta, "pending" NO es un estado válido (a diferencia de OXXO):
-    // el banco responde al instante, así que aquí se trata igual que un rechazo,
-    // con el mensaje que explica el motivo real. El pedido se queda PENDIENTE
-    // en nuestra base (nunca se confirma), para que el cliente pueda reintentar.
+    // con tarjeta "pending" no cuenta como válido (distinto a OXXO), el banco
+    // responde al instante así que se trata como rechazo y queda pendiente para reintentar
     console.error('[MP Orders: pago no acreditado]', { status: order.status, statusDetail })
     await eliminarPedidoFallido(id)
     return Response.json({

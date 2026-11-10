@@ -1,7 +1,4 @@
-// src/utils/imagenesProductos.js
-// Mapa de `producto.imagen` (nombre de archivo que ya devuelve el backend)
-// hacia una URL real de imagen. Las fotos son de Pexels (uso libre, sin
-// necesidad de licencia) y se eligieron por su relación con cada producto.
+// mapea el nombre de archivo que manda el backend a una url de imagen real (pexels)
 export const IMAGENES_PRODUCTOS = {
   'audifonos-gamer-rgb.jpg':
     'https://images.pexels.com/photos/11398246/pexels-photo-11398246.jpeg?auto=compress&cs=tinysrgb&w=800',

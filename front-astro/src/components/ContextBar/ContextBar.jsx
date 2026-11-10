@@ -2,9 +2,7 @@
 import { useAppContext } from '../../context/AppContext'
 import estilos from './ContextBar.module.css'
 
-// Este componente no recibe el mensaje por props: lo toma directamente
-// del AppContext, para no tener que perforar props (prop drilling) desde
-// App hasta aquí solo para un dato de configuración global del sitio.
+// agarra el mensaje del context para no andar pasando props de mas
 export function ContextBar() {
   const { mensajeSitio } = useAppContext()
 

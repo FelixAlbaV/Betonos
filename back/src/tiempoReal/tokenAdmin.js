@@ -1,8 +1,5 @@
-// src/tiempoReal/tokenAdmin.js
-// Token corto (JWT) para autorizar la conexión WebSocket del panel admin.
-// Separado a propósito de BETONOS_INTERNAL_KEY: ese secreto es servidor-a-servidor
-// y nunca debe llegar al navegador. Este token sí viaja al navegador, pero dura
-// poco y solo sirve para escuchar el canal de notificaciones.
+// jwt para el ws del admin, dura poco y solo sirve para el canal de notis
+// (distinto a BETONOS_INTERNAL_KEY, ese nunca llega al navegador)
 import jwt from 'jsonwebtoken'
 
 const DURACION = '10m'

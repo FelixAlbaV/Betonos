@@ -1,10 +1,4 @@
-// src/islas/NotificacionesAdmin/NotificacionesAdmin.jsx
-//
-// ISLA del panel admin: avisa en vivo cuando se confirma un pedido, sin
-// recargar la página. Se conecta por WebSocket al canal "pedidoConfirmado"
-// (ver back/src/tiempoReal). El token lo generó Astro en el servidor,
-// después de validar sesión de Google + ADMIN_EMAILS — esta isla nunca ve
-// el correo de admins autorizados ni ninguna clave interna, solo ese token.
+// avisa en tiempo real cuando se confirma un pedido, via websocket (graphql subscription)
 import { useEffect, useState } from 'react'
 import { createClient } from 'graphql-ws'
 import estilos from './NotificacionesAdmin.module.css'

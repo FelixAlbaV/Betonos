@@ -1,4 +1,3 @@
-// src/components/Footer/Footer.jsx
 import estilos from './Footer.module.css'
 
 export function Footer() {

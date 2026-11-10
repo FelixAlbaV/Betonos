@@ -9,7 +9,7 @@ export const prerender = false
 const sesion = await getSession(Astro.request)
 if (!sesion?.user?.email) return Astro.redirect('/login')
 
-// La información de pedidos nunca debe guardarse en una caché compartida.
+// esto no se cachea compartido, son datos de pedidos del usuario
 Astro.response.headers.set('Cache-Control', 'private, no-store, max-age=0')
 Astro.response.headers.set('Vary', 'Cookie')
 
@@ -71,7 +71,7 @@ let hayMas = false
 let fallo = false
 
 try {
-  // IMPORTANTE: el correo proviene exclusivamente de getSession(), no de la URL.
+  // el correo sale de getSession, no de la url
   const datos = await consultarBackend(QUERY, {
     correo,
     limit: tamanoPagina + 1,
@@ -221,9 +221,7 @@ const nombresRuta = ['Sin iniciar', 'Preparando', 'En camino', 'Entregado']
                           ? 'El pago todavía no está confirmado. Si acabas de pagar, actualiza más tarde.'
                           : 'El pedido fue cancelado; no tiene un envío activo.'}</p>
                       )}
-                      {/* client:load y no client:visible: la isla queda sin
-                          tamaño propio dentro de la tarjeta y el navegador
-                          nunca la detecta como "visible" para hidratarla. */}
+                      {/* con client:visible nunca se detecta como visible, por eso client:load */}
                       {pedido.estado === 'PENDIENTE' && (
                         <VerFichaOxxo client:load pedidoId={pedido.id} />
                       )}

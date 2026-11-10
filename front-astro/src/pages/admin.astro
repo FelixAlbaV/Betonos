@@ -1,10 +1,6 @@
 ---
-/**
- * Dashboard de Betonos (solo lectura).
- * Acceso: Google Auth + lista de correos autorizados (ADMIN_EMAILS).
- * Los datos se consultan DESDE EL SERVIDOR con BETONOS_INTERNAL_KEY.
- * No modifica las rutas de Mercado Pago, Stripe o el CRUD existente.
- */
+// dashboard solo lectura, acceso con Google + lista ADMIN_EMAILS
+// los datos se piden del servidor con BETONOS_INTERNAL_KEY
 import { getSession } from 'auth-astro/server'
 import { consultarBackend, CREAR_TOKEN_ADMIN } from '../lib/betonosServer'
 import NotificacionesAdmin from '../islas/NotificacionesAdmin/NotificacionesAdmin.jsx'
@@ -13,7 +9,7 @@ import '../styles/admin.css'
 const sesion = await getSession(Astro.request)
 if (!sesion?.user?.email) return Astro.redirect('/login')
 
-// Si no hay ADMIN_EMAILS, NO se concede acceso a nadie.
+// sin ADMIN_EMAILS nadie entra
 const permitidos = (import.meta.env.ADMIN_EMAILS || '')
   .split(',')
   .map((correo: string) => correo.trim().toLowerCase())
@@ -28,8 +24,7 @@ if (!permitidos.includes(correoActual)) {
 
 Astro.response.headers.set('Cache-Control', 'private, no-store, max-age=0')
 
-// Token corto para el canal de notificaciones en vivo (ver src/islas/NotificacionesAdmin).
-// Se pide aquí, en el servidor, porque ya se validó arriba que este correo es admin.
+// token para las notificaciones en vivo, se pide aquí porque ya se validó que es admin
 let tokenNotificaciones = ''
 try {
   const datos = await consultarBackend(CREAR_TOKEN_ADMIN, { email: correoActual })
@@ -69,7 +64,7 @@ const CONSULTA_PEDIDOS = `
   }
 `
 
-// El backend ya soporta limit y offset: no dependemos de un límite fijo de 20 registros.
+// el backend soporta limit/offset, no usamos un límite fijo de 20
 async function consultarTodos<T>(consulta: string, campo: string): Promise<T[]> {
   const tamano = 100
   const filas: T[] = []
@@ -80,7 +75,7 @@ async function consultarTodos<T>(consulta: string, campo: string): Promise<T[]> 
     filas.push(...lote)
     if (lote.length < tamano) return filas
   }
-  // Nunca mostrar indicadores incompletos como si fueran exactos.
+  // mejor fallar que mostrar números incompletos como si fueran exactos
   throw new Error(`Se superó el límite de lectura para ${campo}`)
 }
 

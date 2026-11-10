@@ -3,13 +3,9 @@ import { createHmac } from 'node:crypto'
 import { getSession } from 'auth-astro/server'
 import { consultarBackend, CONSULTAR_PEDIDO } from '../../../lib/betonosServer'
 
-// OXXO Pay: pago en efectivo, vía la misma Orders API que usa la tarjeta
-// (api/pagos/procesar.ts), con payment_method { id: "oxxo", type: "ticket" }
-// en vez de credit_card/debit_card. Mercado Pago genera una ficha con
-// código de barras; el cliente paga en la tienda y Mercado Pago nos avisa
-// por el mismo webhook que ya usa el resto de los pagos
-// (api/pagos/webhook.ts, rama "order"). Aquí solo se genera la ficha: el
-// pedido se confirma como PAGADO únicamente cuando llegue ese webhook.
+// OXXO: usa la misma Orders API que la tarjeta pero con payment_method
+// "oxxo"/"ticket". Aquí solo se genera la ficha, el pedido se confirma
+// como pagado hasta que llegue el webhook
 const dinero = (valor: number) => valor.toFixed(2)
 
 function ticketDeOrder(order: any) {
@@ -47,7 +43,7 @@ export const POST: APIRoute = async ({ request }) => {
     const total = dinero(pedido.total)
     const [nombre, ...resto] = (sesion.user.name || 'Cliente Betonos').trim().split(' ')
     const apellido = resto.join(' ') || 'Betonos'
-    // Llave fija por pedido: evita duplicar la ficha si hay un reintento de red.
+    // llave fija por pedido, evita duplicar la ficha si hay reintento de red
     const idempotencyKey = createHmac('sha256', clave).update(`mp-oxxo:${id}`).digest('hex')
 
     const crear = await fetch('https://api.mercadopago.com/v1/orders', {
@@ -79,9 +75,7 @@ export const POST: APIRoute = async ({ request }) => {
       return Response.json({ error: 'Mercado Pago rechazó la solicitud de la ficha OXXO.' }, { status: 502 })
     }
 
-    // La order se crea en estado "processing" y la ficha (ticket_url, código
-    // de barras) tarda un instante en quedar lista: se reintenta la consulta
-    // unas cuantas veces antes de rendirse.
+    // la ficha tarda un poco en estar lista, se reintenta unas veces antes de rendirse
     let order = datos
     let ticket = ticketDeOrder(order)
     for (let intento = 0; intento < 6 && !ticket?.ticket_url; intento++) {
